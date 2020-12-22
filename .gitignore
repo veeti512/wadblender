@@ -1,4 +1,2 @@
-.vscode/settings.json
-.vscode/.ropeproject/config.py
 *.pyc
 .vscode/
