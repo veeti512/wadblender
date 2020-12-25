@@ -9,3 +9,10 @@ Addon to import Tomb Raider Level Editor objects and animations into Blender.
 ## Usage
 * From the File menu, go to import and select "Import Tomb Raider 4 WAD file".
 * Select what to import from the open dialog.
+
+## Features
+* Import rigged Lara model (skin + skin joints + animations)
+* Import rigged Movables and animations
+* Import statics with lighting information
+* Export objects and animations in FBX format
+* Export animation data (dispatches, commands, etc) as json file
