@@ -14,5 +14,7 @@ Addon to import Tomb Raider Level Editor objects and animations into Blender.
 * Import rigged Lara model (skin + skin joints + animations)
 * Import rigged Movables and animations
 * Import statics with lighting information
+* Import and edit movables with shine and opacity information
 * Export objects and animations in FBX format
+* Export objects and animations in OBJ format
 * Export animation data (dispatches, commands, etc) as json file

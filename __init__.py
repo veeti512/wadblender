@@ -18,6 +18,7 @@ Created by YOUR NAME
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+from dataclasses import dataclass
 from bpy.types import Operator
 from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
 from bpy_extras.io_utils import ImportHelper
@@ -30,6 +31,8 @@ from . import objects
 from . import movables
 from . import statics
 from . import developer_utils
+from . import shinepanel
+from .common import createMaterials
 import importlib
 import os
 import bpy
@@ -57,29 +60,53 @@ importlib.reload(lara)
 importlib.reload(read)
 importlib.reload(data)
 importlib.reload(model)
-modules = developer_utils.setup_addon_modules(__path__, __name__, "bpy" in locals())
+modules = developer_utils.setup_addon_modules(
+    __path__, __name__, "bpy" in locals())
 
 
-def import_wad(context, filepath, type, scale_setting, import_anims, discard_junk, export_fbx, export_json, create_nla):
+class Options:
+    filepath: str
+    wadname: str
+    path: str
+    scale: int
+    import_anims: bool
+    discard_junk: bool
+    export_fbx: bool
+    export_json: bool
+    create_nla: bool
+    export_obj: bool
+    rotate: bool
+
+
+shinepanel.register()
+
+# filepath, type, scale_setting, import_anims, discard_junk, export_fbx, export_json, create_nla):
+
+
+def import_wad(context, type, options):
     from importlib import reload
 
-    with open(filepath, "rb") as f:
+    with open(options.filepath, "rb") as f:
         wad = read.readWAD(f)
 
-    path, wadfile = os.path.split(filepath)
-    path += '\\'
-
-    scale = int(scale_setting)
+    uvmap = bpy.data.images.new(
+        'textures', wad.mapwidth, wad.mapheight, alpha=True)
+    uvmap.pixels = wad.textureMap
+    texture_path = options.path + options.wadname + ".png"
+    bpy.data.images["textures"].save_render(texture_path)
+    materials = createMaterials(options.wadname, texture_path)
 
     if type == 'OPT_A' or type == 'OPT_D':
-        lara.main(path, wadfile[:-4], wad, scale, import_anims, create_nla, export_fbx, export_json)
+        # material_ids, path, wadname, wad, scale, import_anims, create_nla, export_fbx, export_json)
+        lara.main(materials, wad, options)
 
     if type == 'OPT_B' or type == 'OPT_D':
-        movables.main(path, wadfile[:-4], wad, scale, import_anims,
-                      export_fbx, export_json, discard_junk, create_nla)
+        # material_ids, path, wadname, wad, scale, import_anims, export_fbx, export_json, discard_junk, create_nla)
+        movables.main(materials, wad, options)
 
     if type == 'OPT_C' or type == 'OPT_D':
-        statics.main(path, wadfile[:-4], wad, scale, export_fbx)
+        # material_ids, path, wadname, wad, scale, export_fbx)
+        statics.main(materials, wad, options)
 
     return set()
 
@@ -114,7 +141,7 @@ class ImportWAD(Operator, ImportHelper):
             ('OPT_C', "Statics", "Import all Static objects"),
             ('OPT_D', "Everything", "Import everything"),
         ),
-        default='OPT_A',
+        default='OPT_D',
     )
 
     scale_setting: IntProperty(
@@ -143,9 +170,21 @@ class ImportWAD(Operator, ImportHelper):
         default=True,
     )
 
+    rotate: BoolProperty(
+        name="Rotate objects upright",
+        description="Axis rotation for Unity",
+        default=False,
+    )
+
     export_fbx: BoolProperty(
         name="Export Objects and Animations (FBX)",
         description="Export objects and animations in FBX format",
+        default=False,
+    )
+
+    export_obj: BoolProperty(
+        name="Export Objects (OBJ)",
+        description="Export objects and animations in OBJ format",
         default=False,
     )
 
@@ -176,13 +215,36 @@ class ImportWAD(Operator, ImportHelper):
         row.prop(self, "discard_junk")
 
         row = layout.row(align=True)
+        row.prop(self, "rotate")
+
+        row = layout.row(align=True)
         row.prop(self, "export_fbx")
+
+        row = layout.row(align=True)
+        row.prop(self, "export_obj")
 
         row = layout.row(align=True)
         row.prop(self, "export_json")
 
     def execute(self, context):
-        return import_wad(context, self.filepath, self.type, self.scale_setting, self.import_anims, self.discard_junk, self.export_fbx, self.export_json, self.create_nla)
+
+        options = Options()
+        options.filepath = self.filepath
+        options.wadname = os.path.basename(self.filepath)[:-4]
+        options.scale = int(self.scale_setting)
+        options.import_anims = self.import_anims
+        options.discard_junk = self.discard_junk
+        options.export_json = self.export_json
+        options.export_fbx = self.export_fbx
+        options.export_obj = self.export_obj
+        options.create_nla = self.create_nla
+        options.rotate = self.rotate
+
+        options.path, _ = os.path.split(options.filepath)
+        options.path += '\\'
+
+        # self.filepath, self.type, self.scale_setting, self.import_anims, self.discard_junk, self.export_fbx, self.export_json, self.create_nla)
+        return import_wad(context, self.type, options)
 
 
 # Only needed if you want to add into a dynamic menu

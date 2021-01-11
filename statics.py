@@ -2,7 +2,7 @@ import bpy
 import math
 
 from .objects import static_names
-from .common import apply_textures, createMaterial
+from .common import apply_textures
 
 
 def paint_vertex(obj):
@@ -18,21 +18,15 @@ def paint_vertex(obj):
             vcol_layer.data[loop_index].color = [1 - obj['shades'][loop_vert_index] / 255, ] * 3 + [1.0]
 
 
-def main(path, wadname, w, scale, export_fbx):
-
-    uvmap = bpy.data.images.new('textures', w.mapwidth, w.mapheight, alpha=True)
-    uvmap.pixels = w.textureMap
-
-    mat = createMaterial(uvmap)
-    bpy.data.images["textures"].save_render(path + "textures.png")
+def main(materials, wad, options): # material_ids, path, wadname, w, scale, export_fbx):
 
     main_collection = bpy.data.collections.get('Collection')
     col = bpy.data.collections.new('Statics')
     main_collection.children.link(col)
 
-    for static in w.statics:
+    for static in wad.statics:
         m = static.mesh
-        verts = [[v/scale for v in e] for e in m.vertices]
+        verts = [[v/options.scale for v in e] for e in m.vertices]
         faces = [e.face for e in m.polygons]
         name = static_names[static.idx]
         mesh = bpy.data.meshes.new(name)
@@ -41,16 +35,25 @@ def main(path, wadname, w, scale, export_fbx):
         col.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
         mesh.from_pydata(verts, [], faces)
-        apply_textures(m, obj, mat)
+        apply_textures(m, obj, materials)
         mesh.flip_normals()
         paint_vertex(obj)
 
-        bpy.context.object.rotation_euler[0] = -math.pi/2
-        bpy.context.object.rotation_euler[2] = -math.pi
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-        obj.hide_set(True)
+        if options.rotate:
+            bpy.context.object.rotation_euler[0] = -math.pi/2
+            bpy.context.object.rotation_euler[2] = -math.pi
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
-        if export_fbx:
-            obj.select_set(True)
-            filepath = path + '\\{}.fbx'.format(name)
+        if options.export_fbx:
+            bpy.ops.object.select_all(action='DESELECT')
+            bpy.context.object.select_set(True)
+            filepath = options.path + '\\{}.fbx'.format(name)
             bpy.ops.export_scene.fbx(filepath=filepath, axis_forward='Z', use_selection=True, add_leaf_bones=False, bake_anim_use_all_actions =False)
+
+        if options.export_obj:
+            bpy.ops.object.select_all(action='DESELECT')
+            bpy.context.object.select_set(True)
+            filepath = options.path + '\\{}.obj'.format(name)
+            bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
+
+        obj.hide_set(True)

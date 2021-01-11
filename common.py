@@ -5,23 +5,65 @@ import math
 import json
 from typing import List, Tuple, Dict
 
-def createMaterial(uvmap):
-    mat = bpy.data.materials.new(name='WAD material')
-    mat.use_nodes = True
-    bsdf = mat.node_tree.nodes["Principled BSDF"]
-    texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
-    texImage.image = uvmap
-    mat.node_tree.links.new(
-        bsdf.inputs['Base Color'], texImage.outputs['Color'])
-    mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
-    return mat
+# def createMaterial(uvmap):
+#     mat = bpy.data.materials.new(name='WAD material')
+#     mat.use_nodes = True
+#     bsdf = mat.node_tree.nodes["Principled BSDF"]
+#     texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+#     texImage.image = bpy.data.images.load(uvmap)
+#     mat.node_tree.links.new(
+#         bsdf.inputs['Base Color'], texImage.outputs['Color'])
+#     mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
+#     bpy.ops.image.open(filepath=uvmap, files=[{"name":"textures.png"}])
+
+#     mat.node_tree.nodes["Image Texture"].image = bpy.data.images["textures.png"]
+#     return mat
 
 
-def apply_textures(mesh, obj, mat):
-    if obj.data.materials:
-        obj.data.materials[0] = mat
-    else:
-        obj.data.materials.append(mat)
+def createMaterials(name, uvmap):
+    materials = []
+    ids = []
+    for i in range(32):
+        mat = bpy.data.materials.new(name=name + '_' + str(i))
+        mat.use_nodes = True
+        bsdf = mat.node_tree.nodes["Principled BSDF"]
+        texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        texImage.image = bpy.data.images.load(uvmap)
+        mat.node_tree.links.new(
+            bsdf.inputs['Base Color'], texImage.outputs['Color'])
+        mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
+        bpy.ops.image.open(filepath=uvmap, files=[{"name":"textures.png"}])
+        bsdf.inputs[7].default_value = 1.0 - i / 31
+
+        mat.node_tree.nodes["Image Texture"].image = bpy.data.images["{}.png".format(name)]
+        materials.append(mat)
+        ids.append(bpy.data.materials.find(mat.name))
+
+    for i in range(32, 64):
+        mat = bpy.data.materials.new(name=name + '_' + str(i))
+        mat.use_nodes = True
+        bsdf = mat.node_tree.nodes["Principled BSDF"]
+        texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        texImage.image = bpy.data.images.load(uvmap)
+        mat.node_tree.links.new(
+            bsdf.inputs['Base Color'], texImage.outputs['Color'])
+        mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
+        bpy.ops.image.open(filepath=uvmap, files=[{"name":"textures.png"}])
+        bsdf.inputs[7].default_value = 1.0 - (i-32) / 31
+        bsdf.inputs[18].default_value = 0.
+
+        mat.node_tree.nodes["Image Texture"].image = bpy.data.images["{}.png".format(name)]
+        mat.blend_method = 'BLEND'
+        materials.append(mat)
+        ids.append(bpy.data.materials.find(mat.name))
+
+    return materials
+
+
+def apply_textures(mesh, obj, materials):
+
+    for i in range(64):
+        obj.data.materials.append(materials[i])
 
     bpy.ops.mesh.uv_texture_add()
     for polygon, blender_polygon in zip(mesh.polygons, obj.data.polygons):
@@ -40,6 +82,16 @@ def apply_textures(mesh, obj, mat):
                 data[i].uv, data[j].uv, data[k].uv = c, d, b
             else:
                 data[i].uv, data[j].uv, data[k].uv = d, a, c
+
+        if hasattr(polygon, 'intensity') and polygon.shine == 1:
+            if polygon.opacity == 1:
+                blender_polygon.material_index = polygon.intensity - 1
+            else:
+                blender_polygon.material_index = polygon.intensity - 1 + 32
+            if polygon.intensity > 0:
+                print(mesh)
+        else:
+            blender_polygon.material_index = 0
 
 
 def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_meshes, bonesfile, vertexfile, scale):
@@ -94,7 +146,7 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
         modifier.object = rig
 
 
-def create_animations(rig, bonenames, ppoints, animations, scale, path, export_fbx, export_json, create_nla):
+def create_animations(rig, bonenames, ppoints, animations, options): #, scale, path, export_fbx, export_json, create_nla):
     bpy.ops.object.mode_set(mode="OBJECT")
 
     if rig.animation_data is None:
@@ -105,10 +157,13 @@ def create_animations(rig, bonenames, ppoints, animations, scale, path, export_f
         if bonename in rig.pose.bones:
             rig.pose.bones[bonename].rotation_mode = 'ZXY'
 
+
     bpy.context.view_layer.objects.active = rig
-    bpy.context.object.rotation_euler[0] = -math.pi/2
-    bpy.context.object.rotation_euler[2] = -math.pi
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    
+    if options.rotate:
+        bpy.context.object.rotation_euler[0] = -math.pi/2
+        bpy.context.object.rotation_euler[2] = -math.pi
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 
     for idx, animation in enumerate(animations):
@@ -126,7 +181,7 @@ def create_animations(rig, bonenames, ppoints, animations, scale, path, export_f
             keyframe_points = fc.keyframe_points
             keyframe_points.add(len(offsets))
             for j, val in enumerate(offsets):
-                keyframe_points[j].co = (j, val[axis] / scale)
+                keyframe_points[j].co = (j, val[axis] / options.scale)
 
         for bonename in bonenames:
             for axis in [0, 1, 2]:
@@ -140,16 +195,16 @@ def create_animations(rig, bonenames, ppoints, animations, scale, path, export_f
 
         action.use_fake_user = True
 
-        if create_nla:
+        if options.create_nla:
             track = rig.animation_data.nla_tracks.new()
             track.name = str(idx)
             track.strips.new(action.name, start=0, action=action)
 
-    if export_fbx:
+    if options.export_fbx:
         bpy.ops.object.select_all(action='DESELECT')
         rig.select_set(True)
         bpy.context.view_layer.objects.active = rig
-        filepath = path + '\\{}.fbx'.format(rig.name)
+        filepath = options.path + '\\{}.fbx'.format(rig.name)
         bpy.ops.export_scene.fbx(filepath=filepath, axis_forward='Z', use_selection=True, add_leaf_bones=False, bake_anim_use_all_actions =True, bake_anim_use_nla_strips=False)
 
 
