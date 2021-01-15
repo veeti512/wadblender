@@ -1,40 +1,5 @@
 import bpy
 import bmesh
-# from bpy.props import (StringProperty,
-#                        BoolProperty,
-#                        IntProperty,
-#                        FloatProperty,
-#                        FloatVectorProperty,
-#                        EnumProperty,
-#                        PointerProperty,
-#                        IntVectorProperty
-#                        )
-
-
-# from bpy.types import (Panel,
-#                        Operator,
-#                        AddonPreferences,
-#                        PropertyGroup,
-#                        )
-
-static_names = ['PLANT0', 'PLANT1', 'PLANT2', 'PLANT3', 'PLANT4', 'PLANT5', 'PLANT6', 'PLANT7', 'PLANT8', 'PLANT9',
-                'FURNITURE0', 'FURNITURE1', 'FURNITURE2', 'FURNITURE3', 'FURNITURE4', 'FURNITURE5', 'FURNITURE6',
-                'FURNITURE7', 'FURNITURE8', 'FURNITURE9', 'ROCK0', 'ROCK1', 'ROCK2', 'ROCK3', 'ROCK4', 'ROCK5',
-                'ROCK6', 'ROCK7', 'ROCK8', 'ROCK9', 'ARCHITECTURE0', 'ARCHITECTURE1', 'ARCHITECTURE2',
-                'ARCHITECTURE3', 'ARCHITECTURE4', 'ARCHITECTURE5', 'ARCHITECTURE6', 'ARCHITECTURE7',
-                'ARCHITECTURE8', 'ARCHITECTURE9', 'DEBRIS0', 'DEBRIS1', 'DEBRIS2', 'DEBRIS3', 'DEBRIS4', 'DEBRIS5',
-                'DEBRIS6', 'DEBRIS7', 'DEBRIS8', 'DEBRIS9', 'SHATTER0', 'SHATTER1', 'SHATTER2', 'SHATTER3', 'SHATTER4',
-                'SHATTER5', 'SHATTER6', 'SHATTER7', 'SHATTER8', 'SHATTER9']
-
-
-# class TEST_OT_test_op(Operator):
-#     bl_idname = 'test.test_op'
-#     bl_label = 'Test'
-#     bl_description = 'Test'
-#     bl_options = {'REGISTER', 'UNDO'}
-
-#     def execute(self, context):
-#         return {'FINISHED'}
 
 
 class HelloWorldPanel(bpy.types.Panel):

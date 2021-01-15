@@ -1,12 +1,11 @@
 import bpy
+import math
 
 from .objects import movable_names, movables2discard
 from .common import apply_textures, create_animations, save_animations_data
-from collections import defaultdict
 import bmesh
 
-
-def main(materials, wad, options): # material_ids, path, wadname, w, scale, import_anims, export_fbx, export_json, discard_junk, create_nla):
+def main(materials, wad, options):
     movable_objects = {}
     animations = {}
     main_collection = bpy.data.collections.get('Collection')
@@ -42,16 +41,8 @@ def main(materials, wad, options): # material_ids, path, wadname, w, scale, impo
                 for v, normal in zip(mesh_data.vertices, m.normals):
                     v.normal = normal
 
-            # print(shine)
-            # print(list(shine_layer.data))
-            # shine_layer = mesh_data.polygon_layers_int.new(name="shine_layer")
-            # for f, e in enumerate(shine):
-            #     shine_layer.data[f].value = e
-
-
             bpy.ops.object.mode_set(mode='EDIT')
             bm = bmesh.from_edit_mesh(mesh_data)
-            # shine_layer = bm.faces.layers.int.get(shine_layer.name)
 
 
             bpy.ops.object.mode_set(mode='OBJECT')
@@ -146,10 +137,28 @@ def main(materials, wad, options): # material_ids, path, wadname, w, scale, impo
 
 
             if options.import_anims:
-                create_animations(rig, meshnames, cpivot_points, animations[name], options) # scale, path, export_fbx, export_json, create_nla)
+                create_animations(rig, meshnames, cpivot_points, animations[name], options)
 
             if options.export_json:
                 save_animations_data(animations[name], options.path, name)
+        
+
+            bpy.context.view_layer.objects.active = rig
+
+            if options.rotate:
+                bpy.ops.object.mode_set(mode="OBJECT")
+                bpy.context.object.rotation_euler[0] = -math.pi/2
+                bpy.context.object.rotation_euler[2] = -math.pi
+                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        else:
+            if options.rotate:
+                bpy.ops.object.mode_set(mode="OBJECT")
+                for obj in collection.objects:
+                    obj.select_set(True)
+                bpy.context.object.rotation_euler[0] = -math.pi/2
+                bpy.context.object.rotation_euler[2] = -math.pi
+                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
 
         if options.export_fbx:
             filepath = options.path + '\\{}.fbx'.format(name)

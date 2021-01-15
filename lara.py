@@ -1,19 +1,14 @@
 import bpy
 from importlib import reload
 import os
+import math
 
 from .objects import movable_names
 from .common import apply_textures, extract_pivot_points, create_lara_skeleton, create_animations, save_animations_data
 from .objects import lara_skin_names, lara_skin_joints_names
 
 
-def main(materials, wad, options): # material_ids, path, wadname, w, scale, import_anims, create_nla, export_fbx, export_json):
-    # uvmap = bpy.data.images.new('textures', w.mapwidth, w.mapheight, alpha=True)
-    # uvmap.pixels = w.textureMap
-    # bpy.data.images["textures"].save_render(path + "textures.png")
-    # mat = createMaterial(path + "textures.png")
-
-
+def main(materials, wad, options): 
     meshes2replace = {}
     meshes2replace['LARA'] = []
     meshes2replace['PISTOLS_ANIM'] = ['LEFT_THIGH', 'RIGHT_THIGH', 'RIGHT_HAND', 'LEFT_HAND']
@@ -124,6 +119,15 @@ def main(materials, wad, options): # material_ids, path, wadname, w, scale, impo
 
         bonenames = [mesh_data.name + '_BONE' for mesh_data in movables['LARA_SKIN']]
 
+
+        bpy.context.view_layer.objects.active = rig
+        bpy.ops.object.mode_set(mode="OBJECT")
+    
+        if options.rotate:
+            bpy.context.object.rotation_euler[0] = -math.pi/2
+            bpy.context.object.rotation_euler[2] = -math.pi
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
         if options.export_fbx:
             filepath = options.path + '\\{}.fbx'.format(anim)
             bpy.ops.object.mode_set(mode="OBJECT")
@@ -133,6 +137,7 @@ def main(materials, wad, options): # material_ids, path, wadname, w, scale, impo
             for obj in col.objects:
                 obj.select_set(True)
             bpy.ops.export_scene.fbx(filepath=filepath, axis_forward='Z', use_selection=True, add_leaf_bones=False, bake_anim_use_all_actions =False)
+
 
 
         if options.export_obj:
@@ -146,7 +151,7 @@ def main(materials, wad, options): # material_ids, path, wadname, w, scale, impo
             bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
 
         if options.import_anims:
-            create_animations(rig, bonenames, pivot_points['LARA_SKIN'], animations[anim], options) # scale, path, export_fbx, export_json, create_nla)
+            create_animations(rig, bonenames, pivot_points['LARA_SKIN'], animations[anim], options)
 
         if options.export_json:
             if anim == 'LARA':

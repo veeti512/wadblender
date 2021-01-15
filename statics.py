@@ -18,7 +18,7 @@ def paint_vertex(obj):
             vcol_layer.data[loop_index].color = [1 - obj['shades'][loop_vert_index] / 255, ] * 3 + [1.0]
 
 
-def main(materials, wad, options): # material_ids, path, wadname, w, scale, export_fbx):
+def main(materials, wad, options):
 
     main_collection = bpy.data.collections.get('Collection')
     col = bpy.data.collections.new('Statics')
@@ -40,6 +40,8 @@ def main(materials, wad, options): # material_ids, path, wadname, w, scale, expo
         paint_vertex(obj)
 
         if options.rotate:
+            bpy.ops.object.mode_set(mode="OBJECT")
+            bpy.context.object.select_set(True)
             bpy.context.object.rotation_euler[0] = -math.pi/2
             bpy.context.object.rotation_euler[2] = -math.pi
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)

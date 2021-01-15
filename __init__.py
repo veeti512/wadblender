@@ -32,6 +32,7 @@ from . import movables
 from . import statics
 from . import developer_utils
 from . import shinepanel
+from . import export_anim
 from .common import createMaterials
 import importlib
 import os
@@ -79,6 +80,7 @@ class Options:
 
 
 shinepanel.register()
+export_anim.register()
 
 # filepath, type, scale_setting, import_anims, discard_junk, export_fbx, export_json, create_nla):
 
@@ -173,7 +175,7 @@ class ImportWAD(Operator, ImportHelper):
     rotate: BoolProperty(
         name="Rotate objects upright",
         description="Axis rotation for Unity",
-        default=False,
+        default=True,
     )
 
     export_fbx: BoolProperty(

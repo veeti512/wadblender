@@ -160,10 +160,10 @@ def create_animations(rig, bonenames, ppoints, animations, options): #, scale, p
 
     bpy.context.view_layer.objects.active = rig
     
-    if options.rotate:
-        bpy.context.object.rotation_euler[0] = -math.pi/2
-        bpy.context.object.rotation_euler[2] = -math.pi
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    # if options.rotate:
+    #     bpy.context.object.rotation_euler[0] = -math.pi/2
+    #     bpy.context.object.rotation_euler[2] = -math.pi
+    #     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 
     for idx, animation in enumerate(animations):
