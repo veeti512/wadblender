@@ -4,7 +4,7 @@ This is the file to upload to Adobe Mixamo: https://drive.google.com/file/d/1-rt
 
 ## Download and Install
 * [Video Tutorial](https://www.youtube.com/watch?v=8LP4uLe9Onw)
-* Click on Releases and download the wadblender-master.zip file.
+* Click on Releases and download the latest wadblender.zip file.
 * Open Blender and from the edit menu select Preferences.
 * Select the Addons tab and click on Install... select the downloaded the wadblender-master.zip file and click on the WAD Blender checkbox.
 
