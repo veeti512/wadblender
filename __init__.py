@@ -80,7 +80,7 @@ class Options:
 
 
 shinepanel.register()
-export_anim.register()
+
 
 # filepath, type, scale_setting, import_anims, discard_junk, export_fbx, export_json, create_nla):
 
@@ -258,11 +258,13 @@ def menu_func_import(self, context):
 def register():
     bpy.utils.register_class(ImportWAD)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
+    export_anim.register()
 
 
 def unregister():
     bpy.utils.unregister_class(ImportWAD)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+    export_anim.unregister()
 
 
 if __name__ == "__main__":
