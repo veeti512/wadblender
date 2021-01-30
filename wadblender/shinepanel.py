@@ -2,7 +2,7 @@ import bpy
 import bmesh
 
 
-class HelloWorldPanel(bpy.types.Panel):
+class ShinePanel(bpy.types.Panel):
     bl_label = "Wad Blender"
     bl_idname = "OBJECT_PT_hello"
     bl_space_type = 'VIEW_3D'
@@ -32,12 +32,14 @@ class HelloWorldPanel(bpy.types.Panel):
             if face.select:
                 selected.append(face)
         
-        layout.prop(me, "Shine")
-        layout.prop(me, "Opacity")
+        row = layout.row(align=True)
+        row = row.split(factor=0.8, align=True)
+        row.prop(me, "Shine")
+        row.prop(me, "Opacity", text='T', text_ctxt='Translucent')
 
 def set_shine(self, value):
 
-    bm = HelloWorldPanel.ebm.setdefault(self.name, bmesh.from_edit_mesh(self))
+    bm = ShinePanel.ebm.setdefault(self.name, bmesh.from_edit_mesh(self))
 
     selected = []
     for face in bm.faces:
@@ -57,7 +59,7 @@ def set_shine(self, value):
 
 
 def get_shine(self):        
-    bm = HelloWorldPanel.ebm.setdefault(self.name, bmesh.from_edit_mesh(self))
+    bm = ShinePanel.ebm.setdefault(self.name, bmesh.from_edit_mesh(self))
 
     af = bm.faces.active
     if af:
@@ -66,8 +68,9 @@ def get_shine(self):
 
 
 def set_opacity(self, value):
+    value = not value
 
-    bm = HelloWorldPanel.ebm.setdefault(self.name, bmesh.from_edit_mesh(self))
+    bm = ShinePanel.ebm.setdefault(self.name, bmesh.from_edit_mesh(self))
 
     selected = []
     for face in bm.faces:
@@ -84,22 +87,21 @@ def set_opacity(self, value):
 
 
 def get_opacity(self):        
-    bm = HelloWorldPanel.ebm.setdefault(self.name, bmesh.from_edit_mesh(self))
+    bm = ShinePanel.ebm.setdefault(self.name, bmesh.from_edit_mesh(self))
 
     af = bm.faces.active
     if af:
-        print(af)
-        return(af.material_index < 32)
+        return not af.material_index < 32
 
 def register():
 
-    bpy.types.Mesh.Shine = bpy.props.IntProperty(get=get_shine, set=set_shine)
-    bpy.types.Mesh.Opacity = bpy.props.BoolProperty(get=get_opacity, set=set_opacity)
-    bpy.utils.register_class(HelloWorldPanel)
+    bpy.types.Mesh.Shine = bpy.props.IntProperty(get=get_shine, set=set_shine, min=0, max=31)
+    bpy.types.Mesh.Opacity = bpy.props.BoolProperty(get=get_opacity, set=set_opacity, description='Translucent')
+    bpy.utils.register_class(ShinePanel)
 
 
 def unregister():
-    bpy.utils.unregister_class(HelloWorldPanel)
+    bpy.utils.unregister_class(ShinePanel)
 
 
 if __name__ == "__main__":

@@ -1,61 +1,37 @@
 import bpy
-from mathutils import Vector
+from mathutils import Vector, Euler
 from collections import defaultdict
-import math
 import json
 from typing import List, Tuple, Dict
-
-# def createMaterial(uvmap):
-#     mat = bpy.data.materials.new(name='WAD material')
-#     mat.use_nodes = True
-#     bsdf = mat.node_tree.nodes["Principled BSDF"]
-#     texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
-#     texImage.image = bpy.data.images.load(uvmap)
-#     mat.node_tree.links.new(
-#         bsdf.inputs['Base Color'], texImage.outputs['Color'])
-#     mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
-#     bpy.ops.image.open(filepath=uvmap, files=[{"name":"textures.png"}])
-
-#     mat.node_tree.nodes["Image Texture"].image = bpy.data.images["textures.png"]
-#     return mat
-
+import math
 
 def createMaterials(name, uvmap):
     materials = []
-    ids = []
-    for i in range(32):
+    if name + '_0' in bpy.data.materials:
+        for i in range(64):
+            mat = bpy.data.materials[name + '_' + str(i)]
+            materials.append(mat)
+        return materials
+        
+    for i in range(64):
         mat = bpy.data.materials.new(name=name + '_' + str(i))
         mat.use_nodes = True
         bsdf = mat.node_tree.nodes["Principled BSDF"]
         texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
         texImage.image = bpy.data.images.load(uvmap)
-        mat.node_tree.links.new(
-            bsdf.inputs['Base Color'], texImage.outputs['Color'])
+        mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
         mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
-        bpy.ops.image.open(filepath=uvmap, files=[{"name":"textures.png"}])
-        bsdf.inputs[7].default_value = 1.0 - i / 31
+        bpy.ops.image.open(filepath=uvmap, files=[{"name": "{}.png".format(name)}])
+        if i < 32:  # opacity on
+            bsdf.inputs[7].default_value = 1.0 - i / 31  # roughness
+            mat.blend_method = 'OPAQUE'
+        else:
+            bsdf.inputs[7].default_value = 1.0 - (i-32) / 31  # roughness
+            bsdf.inputs[18].default_value = 0.4  # alpha
+            mat.blend_method = 'BLEND'
 
         mat.node_tree.nodes["Image Texture"].image = bpy.data.images["{}.png".format(name)]
         materials.append(mat)
-        ids.append(bpy.data.materials.find(mat.name))
-
-    for i in range(32, 64):
-        mat = bpy.data.materials.new(name=name + '_' + str(i))
-        mat.use_nodes = True
-        bsdf = mat.node_tree.nodes["Principled BSDF"]
-        texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
-        texImage.image = bpy.data.images.load(uvmap)
-        mat.node_tree.links.new(
-            bsdf.inputs['Base Color'], texImage.outputs['Color'])
-        mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
-        bpy.ops.image.open(filepath=uvmap, files=[{"name":"textures.png"}])
-        bsdf.inputs[7].default_value = 1.0 - (i-32) / 31
-        bsdf.inputs[18].default_value = 0.
-
-        mat.node_tree.nodes["Image Texture"].image = bpy.data.images["{}.png".format(name)]
-        mat.blend_method = 'BLEND'
-        materials.append(mat)
-        ids.append(bpy.data.materials.find(mat.name))
 
     return materials
 
@@ -88,8 +64,6 @@ def apply_textures(mesh, obj, materials):
                 blender_polygon.material_index = polygon.intensity - 1
             else:
                 blender_polygon.material_index = polygon.intensity - 1 + 32
-            if polygon.intensity > 0:
-                print(mesh)
         else:
             blender_polygon.material_index = 0
 
@@ -100,7 +74,8 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
     amt = rig.data
 
     def create_bone(node, parent=None, child=None):
-        bonename = next(mesh.name + '_BONE' for mesh in lara_skin_meshes if node in mesh.name)
+        bonename = next(
+            mesh.name + '_BONE' for mesh in lara_skin_meshes if node in mesh.name)
         bone = amt.edit_bones.new(bonename)
         bone.head = pivot_points[node]
         if child:
@@ -113,7 +88,8 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
                 bone.tail = (x, y + 50 / scale, z)
 
         if parent is not None:
-            parent = next(mesh.name + '_BONE' for mesh in lara_skin_meshes if parent in mesh.name)
+            parent = next(
+                mesh.name + '_BONE' for mesh in lara_skin_meshes if parent in mesh.name)
             bone.parent = amt.edit_bones[parent]
 
     with open(bonesfile, 'r') as f:
@@ -124,7 +100,8 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
     for mesh in lara_skin_meshes:
         bonename = mesh.name + '_BONE'
         mesh.vertex_groups.new(name=bonename)
-        mesh.vertex_groups[bonename].add([vert.index for vert in mesh.data.vertices], 1.0, "ADD")
+        mesh.vertex_groups[bonename].add(
+            [vert.index for vert in mesh.data.vertices], 1.0, "ADD")
         mesh.parent = rig
         modifier = mesh.modifiers.new(type='ARMATURE', name=rig.name)
         modifier.object = rig
@@ -134,7 +111,8 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
 
     for i in range(0, len(lines), 2):
         mesh_a, mesh_b = lines[i].split()
-        mesh_a = next(mesh for mesh in lara_skin_joints_meshes if mesh_a in mesh.name)
+        mesh_a = next(
+            mesh for mesh in lara_skin_joints_meshes if mesh_a in mesh.name)
         mesh_b = next(mesh for mesh in lara_skin_meshes if mesh_b in mesh.name)
         vertices = [int(c) for c in lines[i + 1].split()]
         mesh_a.vertex_groups.new(name=mesh_b.name + '_BONE')
@@ -146,24 +124,14 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
         modifier.object = rig
 
 
-def create_animations(rig, bonenames, ppoints, animations, options): #, scale, path, export_fbx, export_json, create_nla):
+def create_animations(rig, bonenames, animations, options):
     bpy.ops.object.mode_set(mode="OBJECT")
 
     if rig.animation_data is None:
         rig.animation_data_create()
 
-    for bonename in bonenames:
-        # this first rotates y, then x and z
-        if bonename in rig.pose.bones:
-            rig.pose.bones[bonename].rotation_mode = 'ZXY'
-
-
     bpy.context.view_layer.objects.active = rig
-    
-    # if options.rotate:
-    #     bpy.context.object.rotation_euler[0] = -math.pi/2
-    #     bpy.context.object.rotation_euler[2] = -math.pi
-    #     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
 
 
     for idx, animation in enumerate(animations):
@@ -174,18 +142,25 @@ def create_animations(rig, bonenames, ppoints, animations, options): #, scale, p
         rotations = defaultdict(list)
         for keyframe in animation.keyFrames:
             for bonename, rot in zip(bonenames, keyframe.rotations):
-                rotations[bonename].append(rot)
+                angle = Euler(rot, 'ZXY')
+
+                angle = angle.to_quaternion()
+                rotations[bonename].append(angle)
 
         for axis in [0, 1, 2]:
-            fc = action.fcurves.new(data_path='pose.bones["{}"].location'.format(bonenames[0]), index=axis)
+            fc = action.fcurves.new(
+                data_path='pose.bones["{}"].location'.format(bonenames[0]), index=axis)
             keyframe_points = fc.keyframe_points
             keyframe_points.add(len(offsets))
             for j, val in enumerate(offsets):
-                keyframe_points[j].co = (j, val[axis] / options.scale)
+                k = 0
+                v = val[axis]
+                    
+                keyframe_points[j].co = (j, v / options.scale)
 
         for bonename in bonenames:
-            for axis in [0, 1, 2]:
-                data_path = 'pose.bones["{}"].rotation_euler'.format(
+            for axis in [0, 1, 2, 3]:
+                data_path = 'pose.bones["{}"].rotation_quaternion'.format(
                     bonename)
                 fc = action.fcurves.new(data_path=data_path, index=axis)
                 keyframe_points = fc.keyframe_points
@@ -195,17 +170,24 @@ def create_animations(rig, bonenames, ppoints, animations, options): #, scale, p
 
         action.use_fake_user = True
 
-        if options.create_nla:
-            track = rig.animation_data.nla_tracks.new()
-            track.name = str(idx)
-            track.strips.new(action.name, start=0, action=action)
-
     if options.export_fbx:
         bpy.ops.object.select_all(action='DESELECT')
         rig.select_set(True)
         bpy.context.view_layer.objects.active = rig
         filepath = options.path + '\\{}.fbx'.format(rig.name)
-        bpy.ops.export_scene.fbx(filepath=filepath, axis_forward='Z', use_selection=True, add_leaf_bones=False, bake_anim_use_all_actions =True, bake_anim_use_nla_strips=False)
+        bpy.ops.export_scene.fbx(
+            filepath=filepath, axis_forward='Z', use_selection=True,
+            add_leaf_bones=False, bake_anim_use_all_actions=True, 
+            bake_anim_use_nla_strips=False
+            )
+
+    if options.create_nla:
+        for idx, animation in enumerate(animations):
+            track = rig.animation_data.nla_tracks.new()
+            name = rig.name + str(idx).zfill(3)
+            action = bpy.data.actions[name]
+            track.name = str(idx)
+            track.strips.new(action.name, start=0, action=action)
 
 
 def extract_pivot_points(meshnames, joints, scale):
@@ -232,12 +214,10 @@ def extract_pivot_points(meshnames, joints, scale):
 
             parents[cur] = parent
             px, py, pz = pivot_points[parent]
-            pivot_points[cur] = (px + dx / scale, py +
-                                 dy / scale, pz + dz / scale)
+            pivot_points[cur] = (px + dx / scale, py + dy / scale, pz + dz / scale)
             prev = cur
 
     return pivot_points
-
 
 
 def save_animations_data(animations, path, filename, animationsfile='', statesfile=''):
@@ -261,14 +241,14 @@ def save_animations_data(animations, path, filename, animationsfile='', statesfi
 
     saves = {}
 
+    animations_names = []
     if animationsfile:
-        animations_names = []
         with open(animationsfile, 'r') as f:
             for line in f:
                 animations_names.append(line.strip())
 
+    states_names = {}
     if statesfile:
-        states_names = {}
         with open(statesfile, 'r') as f:
             for line in f:
                 idx, name = line.split()

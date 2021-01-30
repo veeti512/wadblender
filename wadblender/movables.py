@@ -9,12 +9,24 @@ def main(materials, wad, options):
     movable_objects = {}
     animations = {}
     main_collection = bpy.data.collections.get('Collection')
-    col_movables = bpy.data.collections.new('Movables')
-    main_collection.children.link(col_movables)
+    if bpy.data.collections.find('Movables') == -1:
+        col_movables = bpy.data.collections.new('Movables')
+    else:
+        col_movables = bpy.data.collections['Movables']
+
+    if 'Movables' not in main_collection.children:
+        main_collection.children.link(col_movables)
+
     for i, movable in enumerate(wad.movables):
         name = movable_names[movable.idx]
-        if name in movables2discard:
+
+        if options.single_object and name != options.object:
             continue
+
+        if not options.single_object and name in movables2discard:
+            continue
+
+        
         collection = bpy.data.collections.new(name)
         col_movables.children.link(collection)
 
@@ -42,12 +54,11 @@ def main(materials, wad, options):
                     v.normal = normal
 
             bpy.ops.object.mode_set(mode='EDIT')
-            bm = bmesh.from_edit_mesh(mesh_data)
 
 
             bpy.ops.object.mode_set(mode='OBJECT')
             apply_textures(m, mesh_obj, materials)
-            mesh_data.flip_normals()
+            #mesh_data.flip_normals()
             meshes.append(mesh_obj)
             
         movable_objects[name] = meshes
@@ -137,7 +148,7 @@ def main(materials, wad, options):
 
 
             if options.import_anims:
-                create_animations(rig, meshnames, cpivot_points, animations[name], options)
+                create_animations(rig, meshnames, animations[name], options)
 
             if options.export_json:
                 save_animations_data(animations[name], options.path, name)
@@ -179,4 +190,5 @@ def main(materials, wad, options):
                 obj.select_set(True)
             bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
             
-        bpy.context.view_layer.layer_collection.children['Collection'].children['Movables'].children[name].hide_viewport = True
+        if not options.single_object:
+            bpy.context.view_layer.layer_collection.children['Collection'].children['Movables'].children[name].hide_viewport = True

@@ -24,31 +24,58 @@ def read_int16(f):
 
 def read_texture_map(f, texture_byte_size, map_width, map_height):
     """texture map is stored as a standard RAW 24bits [RGB] pixel file"""
+
+
+    try:
+        import numpy as np
+        HAS_NUMPY = True
+    except ImportError:
+        HAS_NUMPY = False
+
     raw_data = f.read(texture_byte_size)
-    pixels = []
-    idx = 0
-    for _y in range(map_height):
-        row = []
-        for _x in range(map_width):
-            red, green, blue = raw_data[idx:idx + 3]
-            idx += 3
-            if red == 255 and green == 0 and blue == 255:  # magenta
-                alpha = red = blue = 0
-            else:
-                alpha = 255
 
-            row += [red, green, blue, alpha]
 
-        pixels.append(row)
+    if HAS_NUMPY:
+        im = np.frombuffer(raw_data, dtype='uint8')
+        im = np.reshape(im, (map_height, map_width, 3))
+        data = np.dstack((im, np.zeros((map_height,map_width),dtype=np.uint8)+255))
+        r1, g1, b1 = 255, 0, 255 # Original value
+        r2, g2, b2, a2 = 0, 0, 0, 0 # Value that we want to replace it with
 
-    # flip to move uv origin from bottom left to top left
-    pixels.reverse()
-    img_pixels = []
-    for row in pixels:
-        for val in row:
-            img_pixels.append(val/255)
+        red, green, blue, alpha = data[:,:,0], data[:,:,1], data[:,:,2], data[:,:,3]
+        mask = (red == r1) & (green == g1) & (blue == b1)
+        data[:,:,:4][mask] = [r2, g2, b2, a2]
+        data = np.flipud(data)
+        # data = np.reshape(data, (map_height * map_width, 4))
+        data = data.astype(float)
+        data /= 255
 
-    return img_pixels
+        return data.flatten().tolist()
+    else:
+        pixels = []
+        idx = 0
+        for _y in range(map_height):
+            row = []
+            for _x in range(map_width):
+                red, green, blue = raw_data[idx:idx + 3]
+                idx += 3
+                if red == 255 and green == 0 and blue == 255:  # magenta
+                    alpha = red = blue = 0
+                else:
+                    alpha = 255
+
+                row += [red, green, blue, alpha]
+
+            pixels.append(row)
+
+        # flip to move uv origin from bottom left to top left
+        pixels.reverse()
+        img_pixels = []
+        for row in pixels:
+            for val in row:
+                img_pixels.append(val/255)
+
+        return img_pixels
 
 
 @dataclass

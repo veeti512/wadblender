@@ -1,11 +1,9 @@
 import bpy
-from mathutils import Quaternion
+from mathutils import Quaternion, Euler
 import math
 import os
 import xml.etree.ElementTree as ET
 
-# anim file of the animation you want to replace
-#template_anim = r'C:\Users\kikko\Desktop\anim\wadblender\idle.anim'
 
 template = """<?xml version="1.0" encoding="utf-8"?>
 <WadAnimation xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -25,7 +23,7 @@ template = """<?xml version="1.0" encoding="utf-8"?>
 </WadAnimation>
 """
 
-def export_anim(template_anim, zoffset, rig_name):
+def export_anim_mixamo(template_anim, zoffset, rig_name):
     # output file
     path = os.path.dirname(os.path.realpath(template_anim)) + '\\'
     name = os.path.basename(template_anim)
@@ -36,17 +34,14 @@ def export_anim(template_anim, zoffset, rig_name):
     else:
         xml_string = template
 
+    print(rig_name)
     obj = bpy.data.objects[rig_name]
 
-    lara_skin_names = ['HIPS', 'LEFT_THIGH', 'LEFT_SHIN', 'LEFT_FOOT',
-                    'RIGHT_THIGH', 'RIGHT_SHIN', 'RIGHT_FOOT',
-                    'TORSO', 'RIGHT_UPPER_ARM', 'RIGHT_FOREARM', 'RIGHT_HAND',
-                    'LEFT_UPPER_ARM', 'LEFT_FOREARM', 'LEFT_HAND', 'HEAD']
+    bonenames = [e.name for e in obj.pose.bones]
 
 
     xml_string = xml_string.replace('utf-16', 'utf8')
     tree = ET.ElementTree(ET.fromstring(xml_string))
-    root = tree.getroot()
 
     # remove template anim file keyframes
     keyframes_node = tree.find("KeyFrames")
@@ -63,21 +58,15 @@ def export_anim(template_anim, zoffset, rig_name):
     # read keyframes from anim file
     data = {}
     for fcurve in fcurves:
-        if "scale" in fcurve.data_path or "HIPS" in fcurve.data_path:
-            # trle does not support scale animation
-            # root motion/rotation is applied to the entire rig,
-            # so discard the hips bone datapath
-            continue
-        else:
-            axis = fcurve.array_index
-            data[(fcurve.data_path, axis)] = []
-            for i in range(keyframes_count):
-                data[(fcurve.data_path, axis)].append(fcurve.evaluate(i))
+        axis = fcurve.array_index
+        data[(fcurve.data_path, axis)] = []
+        for i in range(keyframes_count):
+            data[(fcurve.data_path, axis)].append(fcurve.evaluate(i))
 
 
     # initialize rotations and locations lists for each of the 15 Lara body parts
     # and keyframes_count keyframes
-    n = len(lara_skin_names)
+    n = len(bonenames)
     rotations = [[] for _ in range(n)]
     for i in range(n):
         for j in range(keyframes_count):
@@ -87,49 +76,36 @@ def export_anim(template_anim, zoffset, rig_name):
 
     # For each fcurve
     for datapath, kf_points in data.items():
-        if "location" == datapath[0]:  # this is the hips location
+        if "location" in datapath[0]:  # this is the hips location
             for i in range(keyframes_count):
                 locations[i][datapath[1]] = kf_points[i] * 512  # 512 is 1m in trle
                 # mixamo animations ground is at the height of the foot pivot point
-                # so let's rise the z offset by the height of the foot mesh
+                # so optionally rise the z offset by the height of the foot mesh
                 if datapath[1] == 2:
                     locations[i][2] += zoffset
             continue
-
-        if datapath[0] != 'location' and datapath[0] != 'rotation_euler':
-            # location keyframes are discarded except for the hips
-            bonename = datapath[0].split('"')[1][5:][:-5]
         else:
-            # the datapath for the hips rotations is rotation_euler
-            bonename = 'HIPS'
+            # location keyframes are discarded except for the hips
+            bonename = datapath[0].split('"')[1]
+
 
         # save bodyparts rotations in the same order as wad tool
         axis = datapath[1]
-        idx = lara_skin_names.index(bonename)
+        idx = bonenames.index(bonename)
         for i in range(keyframes_count):
             rotations[idx][i][axis] = kf_points[i]
 
-
     # angles conversion
     for j, e in enumerate(rotations):
-        if j == lara_skin_names.index('HIPS'):
-            for i in range(keyframes_count):
-                angles = [math.degrees(p) for p in e[i]]
-                rotations[j][i][0] = angles[0] - 90
-                rotations[j][i][1] = -angles[2] + 90
-                rotations[j][i][2] = -angles[1] + 180
-
-        else:
-            for i in range(keyframes_count):
-                q = Quaternion(e[i])
-                euler = q.to_euler("ZXY")
-                angles = [math.degrees(e) for e in euler]
-                rotations[j][i][0] = -angles[0]
-                rotations[j][i][1] = angles[1]
-                rotations[j][i][2] = -angles[2]
-                if j == 14 or j == 3 or j == 6:
-                    rotations[j][i][0] -= 180
-
+        for i in range(keyframes_count):
+            q = Quaternion(e[i])
+            euler = q.to_euler("ZXY")
+            angles = [math.degrees(e) for e in euler]
+            rotations[j][i][0] = -angles[0]
+            rotations[j][i][1] = angles[1]
+            rotations[j][i][2] = -angles[2]
+            # if j == 14 or j == 3 or j == 6:
+            #     rotations[j][i][0] += 90
 
     # write output anim file
     for datapath in range(keyframes_count):
@@ -149,11 +125,11 @@ def export_anim(template_anim, zoffset, rig_name):
 
         offset = ET.SubElement(wadkf, 'Offset')
         x = ET.SubElement(offset, 'X')
-        x.text = '%f' % -locations[datapath][1]
+        x.text = '%f' % locations[datapath][0]
         y = ET.SubElement(offset, 'Y')
-        y.text = '%f' % locations[datapath][2]
+        y.text = '%f' % -locations[datapath][1]
         z = ET.SubElement(offset, 'Z')
-        z.text = '%f' % locations[datapath][0]
+        z.text = '%f' % locations[datapath][2]
 
         angles = ET.SubElement(wadkf, 'Angles')
 

@@ -21,14 +21,22 @@ def paint_vertex(obj):
 def main(materials, wad, options):
 
     main_collection = bpy.data.collections.get('Collection')
-    col = bpy.data.collections.new('Statics')
-    main_collection.children.link(col)
+    if bpy.data.collections.find('Statics') == -1:
+        col = bpy.data.collections.new('Statics')
+    else:
+        col = bpy.data.collections['Statics']
+
+    if 'Statics' not in main_collection.children:
+        main_collection.children.link(col)
 
     for static in wad.statics:
+        name = static_names[static.idx]
+        if options.single_object and name != options.object:
+            continue
+
         m = static.mesh
         verts = [[v/options.scale for v in e] for e in m.vertices]
         faces = [e.face for e in m.polygons]
-        name = static_names[static.idx]
         mesh = bpy.data.meshes.new(name)
         obj = bpy.data.objects.new(name, mesh)
         obj['shades'] = m.shades
@@ -36,7 +44,7 @@ def main(materials, wad, options):
         bpy.context.view_layer.objects.active = obj
         mesh.from_pydata(verts, [], faces)
         apply_textures(m, obj, materials)
-        mesh.flip_normals()
+        #mesh.flip_normals()
         paint_vertex(obj)
 
         if options.rotate:
@@ -58,4 +66,5 @@ def main(materials, wad, options):
             filepath = options.path + '\\{}.obj'.format(name)
             bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
 
-        obj.hide_set(True)
+        if not options.single_object:
+            obj.hide_set(True)

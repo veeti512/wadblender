@@ -33,6 +33,7 @@ def main(materials, wad, options):
             movable_name = movable_names[movable.idx]
             if movable_name == anim:
                 found = True
+                break
 
         if not found:
             continue
@@ -85,7 +86,7 @@ def main(materials, wad, options):
 
                 apply_textures(m, mesh_obj, materials)
                 mesh_objects.append(mesh_obj)
-                mesh_data.flip_normals()
+                #mesh_data.flip_normals()
 
             movables[movable_name] = mesh_objects
             ppoints = extract_pivot_points(bodyparts_names, movable.joints, options.scale)
@@ -121,11 +122,13 @@ def main(materials, wad, options):
 
 
         bpy.context.view_layer.objects.active = rig
+        rig.rotation_mode = 'ZXY'
         bpy.ops.object.mode_set(mode="OBJECT")
     
         if options.rotate:
-            bpy.context.object.rotation_euler[0] = -math.pi/2
-            bpy.context.object.rotation_euler[2] = -math.pi
+            bpy.context.object.rotation_euler[1] = math.pi
+            bpy.context.object.rotation_euler[0] = math.pi/2
+
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         if options.export_fbx:
@@ -151,7 +154,7 @@ def main(materials, wad, options):
             bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
 
         if options.import_anims:
-            create_animations(rig, bonenames, pivot_points['LARA_SKIN'], animations[anim], options)
+            create_animations(rig, bonenames, animations[anim], options)
 
         if options.export_json:
             if anim == 'LARA':
