@@ -1,23 +1,27 @@
-'''
-Copyright (C) 2021 Bergus
-YOUR@MAIL.com
 
-Created by Bergus
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''
-
+import io
+import sys
+import importlib
+import os
+import bpy
 from bpy.types import Operator
 from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
 from bpy_extras.io_utils import ImportHelper
@@ -32,13 +36,16 @@ from . import developer_utils
 from . import shinepanel
 from . import export_anim
 from . import import_mixamo
+from . import objects as object_names
 from .common import createMaterials
 from .preview import preview
-import importlib
-import os
-import bpy
-from bpy.types import PropertyGroup
-from . import objects as object_names
+
+# TODO PUT THESE SOMEWHERE ELSE
+has_numpy = [True]
+try:
+    import numpy
+except ImportError as e:
+    has_numpy[0] = False
 
 bl_info = {
     "name": "WAD Blender",
@@ -52,15 +59,24 @@ bl_info = {
     "category": "Import-Export"}
 
 
+modulesNames = [ 'KeeMapSettings', 'KeeMapBoneSettings', 'KeeMapBoneList', 'KeeMapBoneOperators', 'KeeMapPanels']
 
-# class MyToolPropertyGroup(PropertyGroup):
-#     testint: bpy.props.EnumProperty(
-#         name="objects",
-#         description=""
-#         )
+modulesFullNames = {}
+for currentModuleName in modulesNames:
+    if 'DEBUG_MODE' in sys.argv:
+        modulesFullNames[currentModuleName] = ('{}'.format(currentModuleName))
+    else:
+        modulesFullNames[currentModuleName] = ('{}.{}'.format(__name__, currentModuleName))
+ 
+for currentModuleFullName in modulesFullNames.values():
+    if currentModuleFullName in sys.modules:
+        importlib.reload(sys.modules[currentModuleFullName])
+    else:
+        globals()[currentModuleFullName] = importlib.import_module(currentModuleFullName)
+        setattr(globals()[currentModuleFullName], 'modulesNames', modulesFullNames)
+ 
 
-# load and reload submodules
-##################################
+# reload submodules
 
 importlib.reload(developer_utils)
 importlib.reload(movables)
@@ -107,13 +123,15 @@ def import_wad(context, type, options):
     if not options.single_object:
         if type == 'OPT_A' or type == 'OPT_D':
             lara.main(materials, wad, options)
-
         if type == 'OPT_B' or type == 'OPT_D':
+            bpy.ops.object.select_all(action='DESELECT')
             movables.main(materials, wad, options)
 
         if type == 'OPT_C' or type == 'OPT_D':
+            bpy.ops.object.select_all(action='DESELECT')
             statics.main(materials, wad, options)
 
+        bpy.ops.object.select_all(action='DESELECT')
         return set()
 
     else:
@@ -121,7 +139,6 @@ def import_wad(context, type, options):
             movables.main(materials, wad, options)
         else:
             statics.main(materials, wad, options)
-
         return set()
         
 
@@ -254,17 +271,14 @@ class ImportWAD(Operator, ImportHelper):
                     with open(self.properties.filepath, "rb") as f:
                         movables, statics = preview(f)
                         files[self.properties.filepath] = movables + statics
-                        #print(files)
                         objects.clear()
                         objects.extend(files[self.properties.filepath])
-                        #print(objects)
                 else:
                     objects.clear()
                     obj_sel[0] = 'None'
             elif self.properties.filepath in files:
                 objects.clear()
                 objects.extend(files[self.properties.filepath])
-                #obj_sel[0] = 'None'
 
             else:
                 objects.clear()
@@ -290,24 +304,8 @@ class ImportWAD(Operator, ImportHelper):
         row.operator("object.simple_operator")
         row.prop(self, "single_object", text=self.object)
 
-
-        #box = layout.box()
-        #box.label(text="Settings", icon="SETTINGS")
-        #row = box.split(factor=0.5, align=True)
-        # row.label(text="Game slot names: ")
-        # row.prop(self, "onames", text="")
-        #row = layout.row(align=True)
-        #row.prop(self, "rotate")
-
-
         row = box.row(align=True)
         row.prop(self, "import_anims")
-
-        # row = box.row(align=True)
-        # if not self.import_anims:
-        #     self.create_nla = False
-        #     row.enabled = False
-        # row.prop(self, "create_nla")
 
         row = box.row()
         row.prop(self, "scale_setting")
@@ -315,14 +313,13 @@ class ImportWAD(Operator, ImportHelper):
         row = layout.box()
         row.label(text="Batch Export:", icon="EXPORT")
 
-        # row = layout.row(align=True)
         row.prop(self, "export_fbx")
-
-        #row = layout.row(align=True)
         row.prop(self, "export_obj")
-
-        #row = layout.row(align=True)
         row.prop(self, "export_json")
+
+        if not has_numpy[0]:
+            row = layout.row()
+            row.operator("import_test.installnumpy")
 
     def execute(self, context):
         options = Options()
@@ -351,10 +348,6 @@ def menu_func_import(self, context):
 
 
 def item_cb(self, context):
-    #return [e.customString for e in bpy.context.scene.objectsList]
-    # props = context.scene.MyPropertyGroup
-    # return props.objects
-    #return objects
     return [(o, o, "") for o in objects]
 
 
@@ -370,13 +363,41 @@ class SimpleOperator(bpy.types.Operator):
         obj_sel[0] = self.my_enum
         update[0] = True
         context.area.tag_redraw()
-        #self.report({'INFO'}, "Selected: %s" % self.my_enum)
         return {'FINISHED'}
 
     def invoke(self, context, event):
         wm = context.window_manager
         wm.invoke_search_popup(self)
         return {'FINISHED'}
+
+
+
+    
+class InstallNumpy(bpy.types.Operator):
+    bl_idname = "import_test.installnumpy"
+    bl_label = "Install Numpy"
+
+    def execute(self, context):
+        import subprocess
+        import sys
+        import os
+
+        # path to python.exe
+        python_exe = os.path.join(sys.prefix, 'bin', 'python.exe')
+
+        # upgrade pip
+        subprocess.call([python_exe, "-m", "ensurepip"])
+        subprocess.call([python_exe, "-m", "pip", "install", "--upgrade", "pip"])
+
+        # install required packages
+        subprocess.call([python_exe, "-m", "pip", "install", "numpy"])
+
+        try:
+            import numpy
+            has_numpy[0] = True
+        except ImportError as e:
+            has_numpy[0] = False
+        return{'FINISHED'}
 
 
 def register():
@@ -386,6 +407,11 @@ def register():
     export_anim.register()
     shinepanel.register()
     import_mixamo.register()
+    bpy.utils.register_class(InstallNumpy)
+    for currentModuleName in modulesFullNames.values():
+        if currentModuleName in sys.modules:
+            if hasattr(sys.modules[currentModuleName], 'register'):
+                sys.modules[currentModuleName].register()
 
 
 def unregister():
@@ -395,6 +421,11 @@ def unregister():
     export_anim.unregister()
     shinepanel.unregister()
     import_mixamo.unregister()
+    bpy.utils.unregister_class(InstallNumpy)
+    for currentModuleName in modulesFullNames.values():
+        if currentModuleName in sys.modules:
+            if hasattr(sys.modules[currentModuleName], 'unregister'):
+                sys.modules[currentModuleName].unregister()
 
 
 

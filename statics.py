@@ -48,7 +48,6 @@ def main(materials, wad, options):
         paint_vertex(obj)
 
         if options.rotate:
-            bpy.ops.object.mode_set(mode="OBJECT")
             bpy.context.object.select_set(True)
             bpy.context.object.rotation_euler[0] = -math.pi/2
             bpy.context.object.rotation_euler[2] = -math.pi

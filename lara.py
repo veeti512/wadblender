@@ -9,6 +9,7 @@ from .objects import lara_skin_names, lara_skin_joints_names
 
 
 def main(materials, wad, options): 
+
     meshes2replace = {}
     meshes2replace['LARA'] = []
     meshes2replace['PISTOLS_ANIM'] = ['LEFT_THIGH', 'RIGHT_THIGH', 'RIGHT_HAND', 'LEFT_HAND']
@@ -82,9 +83,10 @@ def main(materials, wad, options):
 
                 mesh_obj = bpy.data.objects.new(mesh_name, mesh_data)
                 col.objects.link(mesh_obj)
-                bpy.context.view_layer.objects.active = mesh_obj
+                #bpy.context.view_layer.objects.active = mesh_obj
 
                 apply_textures(m, mesh_obj, materials)
+
                 mesh_objects.append(mesh_obj)
                 #mesh_data.flip_normals()
 
@@ -121,19 +123,18 @@ def main(materials, wad, options):
         bonenames = [mesh_data.name + '_BONE' for mesh_data in movables['LARA_SKIN']]
 
 
-        bpy.context.view_layer.objects.active = rig
+        #bpy.context.view_layer.objects.active = rig
         rig.rotation_mode = 'ZXY'
         bpy.ops.object.mode_set(mode="OBJECT")
     
         if options.rotate:
-            bpy.context.object.rotation_euler[1] = math.pi
-            bpy.context.object.rotation_euler[0] = math.pi/2
+            rig.rotation_euler[1] = math.pi
+            rig.rotation_euler[0] = math.pi/2
 
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         if options.export_fbx:
             filepath = options.path + '\\{}.fbx'.format(anim)
-            bpy.ops.object.mode_set(mode="OBJECT")
             bpy.ops.object.select_all(action='DESELECT')
 
             bpy.context.view_layer.objects.active = rig
@@ -143,12 +144,11 @@ def main(materials, wad, options):
 
 
 
+        #bpy.context.view_layer.objects.active = rig
         if options.export_obj:
             filepath = options.path + '\\{}.obj'.format(anim)
-            bpy.ops.object.mode_set(mode="OBJECT")
-            bpy.ops.object.select_all(action='DESELECT')
 
-            bpy.context.view_layer.objects.active = rig
+            bpy.ops.object.select_all(action='DESELECT')
             for obj in col.objects:
                 obj.select_set(True)
             bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
@@ -163,3 +163,4 @@ def main(materials, wad, options):
                 save_animations_data(animations[anim], options.path, anim)
             
         bpy.context.view_layer.layer_collection.children['Collection'].children['Lara'].children[anim].hide_viewport = True
+

@@ -6,6 +6,7 @@ from .common import apply_textures, create_animations, save_animations_data
 import bmesh
 
 def main(materials, wad, options):
+
     movable_objects = {}
     animations = {}
     main_collection = bpy.data.collections.get('Collection')
@@ -53,10 +54,8 @@ def main(materials, wad, options):
                 for v, normal in zip(mesh_data.vertices, m.normals):
                     v.normal = normal
 
-            bpy.ops.object.mode_set(mode='EDIT')
 
-
-            bpy.ops.object.mode_set(mode='OBJECT')
+            #bpy.ops.object.mode_set(mode='OBJECT')
             apply_textures(m, mesh_obj, materials)
             #mesh_data.flip_normals()
             meshes.append(mesh_obj)
@@ -134,12 +133,10 @@ def main(materials, wad, options):
                 mesh.vertex_groups.new(name=bonename)
                 mesh = None
                 
-            bpy.ops.object.mode_set(mode="OBJECT")
             for i in range(len(meshes)):
                 mesh = meshes[i]
                 bonename = mesh.name
                 vertices = [vert.index for vert in mesh.data.vertices]
-                bpy.ops.object.mode_set(mode="OBJECT")
                 mesh.vertex_groups[bonename].add(vertices, 1.0, "ADD")
                 mesh.parent = rig
                 modifier = mesh.modifiers.new(type='ARMATURE', name=rig.name)
@@ -154,18 +151,17 @@ def main(materials, wad, options):
                 save_animations_data(animations[name], options.path, name)
         
 
-            bpy.context.view_layer.objects.active = rig
+            # bpy.context.view_layer.objects.active = rig
 
             if options.rotate:
-                bpy.ops.object.mode_set(mode="OBJECT")
-                bpy.context.object.rotation_euler[0] = -math.pi/2
-                bpy.context.object.rotation_euler[2] = -math.pi
+                rig.rotation_euler[0] = -math.pi/2
+                rig.rotation_euler[2] = -math.pi
                 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         else:
             if options.rotate:
-                bpy.ops.object.mode_set(mode="OBJECT")
                 for obj in collection.objects:
-                    obj.select_set(True)
+                    bpy.context.view_layer.objects.active = obj
+                    
                 bpy.context.object.rotation_euler[0] = -math.pi/2
                 bpy.context.object.rotation_euler[2] = -math.pi
                 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
@@ -192,3 +188,4 @@ def main(materials, wad, options):
             
         if not options.single_object:
             bpy.context.view_layer.layer_collection.children['Collection'].children['Movables'].children[name].hide_viewport = True
+

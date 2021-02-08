@@ -36,28 +36,30 @@ def createMaterials(name, uvmap):
     return materials
 
 
+
 def apply_textures(mesh, obj, materials):
 
     for i in range(64):
         obj.data.materials.append(materials[i])
+    
+    obj.data.uv_layers.new()
+    loops = []
+    vi_uv = []
 
-    bpy.ops.mesh.uv_texture_add()
-    for polygon, blender_polygon in zip(mesh.polygons, obj.data.polygons):
-        a, b, c, d = map(Vector, polygon.tbox)
-        data = obj.data.uv_layers.active.data
+    for idx, (polygon, blender_polygon) in enumerate(zip(mesh.polygons, obj.data.polygons)):
+        a, b, c, d = polygon.tbox
+        loops.append(blender_polygon.loop_indices)
         if len(polygon.face) == 4:
-            i, j, k, l = blender_polygon.loop_indices
-            data[i].uv, data[j].uv, data[k].uv, data[l].uv = a, b, c, d
+            uv = (a, b, c, d)
         else:
-            i, j, k = blender_polygon.loop_indices
             if polygon.order == 0:
-                data[i].uv, data[j].uv, data[k].uv = a, b, d
+                uv = (a, b, d)
             elif polygon.order == 2:
-                data[i].uv, data[j].uv, data[k].uv = b, c, a
+                uv = (b, c, a)
             elif polygon.order == 4:
-                data[i].uv, data[j].uv, data[k].uv = c, d, b
+                uv = (c, d, b)
             else:
-                data[i].uv, data[j].uv, data[k].uv = d, a, c
+                uv = (d, a, c)
 
         if hasattr(polygon, 'intensity') and polygon.shine == 1:
             if polygon.opacity == 1:
@@ -66,6 +68,19 @@ def apply_textures(mesh, obj, materials):
                 blender_polygon.material_index = polygon.intensity - 1 + 32
         else:
             blender_polygon.material_index = 0
+
+        vi_uv.append(uv)
+
+
+    d = {}
+    for i, (uv, loop) in enumerate(zip(vi_uv, loops)):
+        for u, l in zip(uv, loop):
+            d[l] = u
+
+
+    data = obj.data.uv_layers.active.data
+    for k, v in d.items():
+        data[k].uv = v
 
 
 def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_meshes, bonesfile, vertexfile, scale):
@@ -125,14 +140,8 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
 
 
 def create_animations(rig, bonenames, animations, options):
-    bpy.ops.object.mode_set(mode="OBJECT")
-
     if rig.animation_data is None:
         rig.animation_data_create()
-
-    bpy.context.view_layer.objects.active = rig
-
-
 
     for idx, animation in enumerate(animations):
         action = bpy.data.actions.new(str(idx).zfill(3))

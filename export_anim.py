@@ -63,10 +63,7 @@ class ExportSomeData(Operator, ExportHelper):
         row.label(text='WAD Blender', icon="BLENDER")
 
         box = layout.box()
-        #row = box.row(align=True)
         box.prop(self, "group")
-        
-        #row = box.row()
         box.prop(self, "offset")
 
 

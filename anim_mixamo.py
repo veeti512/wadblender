@@ -3,6 +3,7 @@ from mathutils import Quaternion, Euler
 import math
 import os
 import xml.etree.ElementTree as ET
+from .objects import lara_skin_names
 
 
 template = """<?xml version="1.0" encoding="utf-8"?>
@@ -34,7 +35,6 @@ def export_anim_mixamo(template_anim, zoffset, rig_name):
     else:
         xml_string = template
 
-    print(rig_name)
     obj = bpy.data.objects[rig_name]
 
     bonenames = [e.name for e in obj.pose.bones]
@@ -59,6 +59,7 @@ def export_anim_mixamo(template_anim, zoffset, rig_name):
     data = {}
     for fcurve in fcurves:
         axis = fcurve.array_index
+
         data[(fcurve.data_path, axis)] = []
         for i in range(keyframes_count):
             data[(fcurve.data_path, axis)].append(fcurve.evaluate(i))
@@ -67,6 +68,7 @@ def export_anim_mixamo(template_anim, zoffset, rig_name):
     # initialize rotations and locations lists for each of the 15 Lara body parts
     # and keyframes_count keyframes
     n = len(bonenames)
+    print(bonenames)
     rotations = [[] for _ in range(n)]
     for i in range(n):
         for j in range(keyframes_count):
@@ -89,25 +91,31 @@ def export_anim_mixamo(template_anim, zoffset, rig_name):
             bonename = datapath[0].split('"')[1]
 
 
-        # save bodyparts rotations in the same order as wad tool
+
+        # save bodyparts rotations
         axis = datapath[1]
-        idx = bonenames.index(bonename)
+        for i, bone in enumerate(lara_skin_names):
+            if bone in datapath[0]:
+                idx = i
+                print(idx, bone, bonename)
+                break
+        else:
+            assert False
+
         for i in range(keyframes_count):
             rotations[idx][i][axis] = kf_points[i]
 
-    # angles conversion
+    # # angles conversion
     for j, e in enumerate(rotations):
         for i in range(keyframes_count):
             q = Quaternion(e[i])
             euler = q.to_euler("ZXY")
-            angles = [math.degrees(e) for e in euler]
+
+            angles = [math.degrees(e) for e in euler[:3]]
             rotations[j][i][0] = -angles[0]
             rotations[j][i][1] = angles[1]
             rotations[j][i][2] = -angles[2]
-            # if j == 14 or j == 3 or j == 6:
-            #     rotations[j][i][0] += 90
 
-    # write output anim file
     for datapath in range(keyframes_count):
         wadkf = ET.SubElement(keyframes_node, 'WadKeyFrame')
 
