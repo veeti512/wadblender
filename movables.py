@@ -110,9 +110,8 @@ def main(materials, wad, options):
                     if len(tail) > 0:
                         bone = amt.edit_bones.new(cur)
                         bone.head, bone.tail = cpivot_points[cur], cpivot_points[tail[0]]
-                        if bone.head[1] > bone.tail[1]:
-                            x, y, z = bone.head
-                            bone.tail = (x, y + 100 / options.scale, z)
+                        x, y, z = cpivot_points[cur]
+                        bone.head, bone.tail = cpivot_points[cur], (x, y + 100 / options.scale, z)
                         bone.parent = amt.edit_bones[parents[cur]]
                         if bone.head == bone.tail:
                             bone.tail[1] += 0.001

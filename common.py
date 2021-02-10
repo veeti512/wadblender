@@ -93,14 +93,8 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
             mesh.name + '_BONE' for mesh in lara_skin_meshes if node in mesh.name)
         bone = amt.edit_bones.new(bonename)
         bone.head = pivot_points[node]
-        if child:
-            bone.tail = pivot_points[child]
-        else:
-            x, y, z = pivot_points[node]
-            if 'FOOT' in node:
-                bone.tail = (x, y + 10/scale, z + 25/scale)
-            else:
-                bone.tail = (x, y + 50 / scale, z)
+        x, y, z = pivot_points[node]
+        bone.tail = (x, y + 100 / scale, z)
 
         if parent is not None:
             parent = next(

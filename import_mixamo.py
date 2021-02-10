@@ -55,7 +55,7 @@ def create_animation(rig, bonenames, offsets, rots, name):
 def read_some_data(context, filepath, group, name):
     context = bpy.context
     old_objs = set(context.scene.objects)
-    bpy.ops.import_scene.fbx(filepath=filepath)
+    bpy.ops.import_scene.fbx(filepath=filepath, ignore_leaf_bones=True)
     imported_objs = set(context.scene.objects) - old_objs
     obj = [e for e in imported_objs if e.type == 'ARMATURE'][0]
     bonenames = [e.name for e in obj.pose.bones]
@@ -102,8 +102,8 @@ def read_some_data(context, filepath, group, name):
                 locations[i][datapath[1]] = kf_points[i]  # 512 is 1m in trle
                 # mixamo animations ground is at the height of the foot pivot point
                 # so optionally rise the z offset by the height of the foot mesh
-                # if datapath[1] == 2:
-                #     locations[i][2] += zoffset
+                if datapath[1] == 2:
+                    locations[i][2] -= 55 / 512
             continue
 
         if datapath[0] != 'location' and datapath[0] != 'rotation_euler':
@@ -148,8 +148,8 @@ def read_some_data(context, filepath, group, name):
                 rotations[j][i][0] = angles[0]
                 rotations[j][i][1] = angles[1]
                 rotations[j][i][2] = angles[2]
-                if j == 14 or j == 3 or j == 6:
-                    rotations[j][i][0] -= 180
+                # if j == 14 or j == 3 or j == 6:
+                #     rotations[j][i][0] -= 180
 
 
 
