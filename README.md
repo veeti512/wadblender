@@ -2,6 +2,10 @@
 Addon to import Tomb Raider Level Editor objects and animations into Blender.
 This is the file to upload to Adobe Mixamo: https://drive.google.com/file/d/1-rtIi-6teFd4DU-XKpcWlLyrjmlnoYG4/view?usp=sharing
 
+## Config File
+Upload this character on mixamo: https://drive.google.com/file/d/1fcfc7URO3I4XuOO9_fDoMsNhYTH8sDV6/view?usp=sharing
+Use this file to transfer AOD animations:  https://drive.google.com/file/d/1YeCEXPkXrDbpFnh73jtvF8KaW_p4wuym/view?usp=sharing
+
 ## Download and Install
 * [Video Tutorial](https://www.youtube.com/watch?v=8LP4uLe9Onw)
 * Click on Releases and download the latest wadblender.zip file.
