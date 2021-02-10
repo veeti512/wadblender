@@ -88,7 +88,9 @@ def main(materials, wad, options):
                 apply_textures(m, mesh_obj, materials)
 
                 mesh_objects.append(mesh_obj)
-                #mesh_data.flip_normals()
+
+                if options.flip_normals:
+                    mesh_data.flip_normals()
 
             movables[movable_name] = mesh_objects
             ppoints = extract_pivot_points(bodyparts_names, movable.joints, options.scale)

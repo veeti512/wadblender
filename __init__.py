@@ -108,6 +108,8 @@ class Options:
     rotate: bool
     single_object: bool
     object: str
+    single_material: bool
+    flip_normals: bool
 
 
 
@@ -118,7 +120,7 @@ def import_wad(context, type, options):
     uvmap.pixels = wad.textureMap
     texture_path = options.path + options.wadname + ".png"
     bpy.data.images["textures"].save_render(texture_path)
-    materials = createMaterials(options.wadname, texture_path)
+    materials = createMaterials(options, texture_path)
 
     if not options.single_object:
         if type == 'OPT_A' or type == 'OPT_D':
@@ -249,6 +251,18 @@ class ImportWAD(Operator, ImportHelper):
         description="",
         default=False,
     )
+    single_material: BoolProperty(
+        name="Discard Shine and Translucency",
+        description="If checked, only one material is created",
+        default=False,
+    )
+    flip_normals: BoolProperty(
+        name="Flip Normals",
+        description="If checked faces are displayed properly when backface culling is enabled. If checked, remember to select the invert faces option in Tomb Editor.",
+        default=True,
+    )
+
+
     
 
     def draw(self, context):
@@ -305,6 +319,10 @@ class ImportWAD(Operator, ImportHelper):
         row.prop(self, "single_object", text=self.object)
 
         row = box.row(align=True)
+        row.prop(self, "single_material")
+        row = box.row(align=True)
+        row.prop(self, "flip_normals")
+        row = box.row(align=True)
         row.prop(self, "import_anims")
 
         row = box.row()
@@ -335,6 +353,8 @@ class ImportWAD(Operator, ImportHelper):
         options.rotate = self.rotate
         options.single_object = self.single_object
         options.object = obj_sel[0]
+        options.single_material = self.single_material
+        options.flip_normals = self.flip_normals
 
         options.path, _ = os.path.split(options.filepath)
         options.path += '\\'

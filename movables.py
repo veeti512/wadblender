@@ -43,6 +43,7 @@ def main(materials, wad, options):
             mesh_obj = bpy.data.objects.new(mesh_name, mesh_data)
             mesh_obj['boundingSphereCenter'] = [e / options.scale for e in m.boundingSphereCenter]
             mesh_obj['boundingSphereRadius'] = m.boundingSphereRadius / options.scale
+
             mesh_obj['shine'] = shine
             mesh_obj['shineIntensity'] = shineIntensity
             mesh_obj['opacity'] = opacity
@@ -57,7 +58,8 @@ def main(materials, wad, options):
 
             #bpy.ops.object.mode_set(mode='OBJECT')
             apply_textures(m, mesh_obj, materials)
-            #mesh_data.flip_normals()
+            if options.flip_normals:
+                mesh_data.flip_normals()
             meshes.append(mesh_obj)
             
         movable_objects[name] = meshes

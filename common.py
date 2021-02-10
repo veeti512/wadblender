@@ -5,32 +5,59 @@ import json
 from typing import List, Tuple, Dict
 import math
 
-def createMaterials(name, uvmap):
+def createMaterials(options, uvmap):
+    name = options.wadname
     materials = []
-    if name + '_0' in bpy.data.materials:
+
+    if options.single_material:
+        if name + '_0' in bpy.data.materials:
+            mat = bpy.data.materials[name + '_0']
+            materials.append(mat)
+        else:
+            mat = bpy.data.materials.new(name=name + '_0')
+            mat.use_nodes = True
+            bsdf = mat.node_tree.nodes["Principled BSDF"]
+            texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+            texImage.image = bpy.data.images.load(uvmap)
+            mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
+            mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
+            bpy.ops.image.open(filepath=uvmap, files=[{"name": "{}.png".format(name)}])
+            mat.blend_method = 'OPAQUE'
+            mat.node_tree.nodes["Image Texture"].image = bpy.data.images["{}.png".format(name)]
+            materials.append(mat)
+
+        return materials
+
+
+    if name + '_1' in bpy.data.materials:
         for i in range(64):
             mat = bpy.data.materials[name + '_' + str(i)]
             materials.append(mat)
         return materials
         
+    first_already_created = name + '_0' in bpy.data.materials
     for i in range(64):
-        mat = bpy.data.materials.new(name=name + '_' + str(i))
-        mat.use_nodes = True
-        bsdf = mat.node_tree.nodes["Principled BSDF"]
-        texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
-        texImage.image = bpy.data.images.load(uvmap)
-        mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
-        mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
-        bpy.ops.image.open(filepath=uvmap, files=[{"name": "{}.png".format(name)}])
-        if i < 32:  # opacity on
-            bsdf.inputs[7].default_value = 1.0 - i / 31  # roughness
-            mat.blend_method = 'OPAQUE'
+        if i == 0 and first_already_created:
+            mat = bpy.data.materials[name + '_0']
         else:
-            bsdf.inputs[7].default_value = 1.0 - (i-32) / 31  # roughness
-            bsdf.inputs[18].default_value = 0.4  # alpha
-            mat.blend_method = 'BLEND'
+            mat = bpy.data.materials.new(name=name + '_' + str(i))
+            mat.use_nodes = True
+            bsdf = mat.node_tree.nodes["Principled BSDF"]
+            texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+            texImage.image = bpy.data.images.load(uvmap)
+            mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
+            mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
+            bpy.ops.image.open(filepath=uvmap, files=[{"name": "{}.png".format(name)}])
+            if i < 32:  # opacity on
+                bsdf.inputs[7].default_value = 1.0 - i / 31  # roughness
+                mat.blend_method = 'OPAQUE'
+            else:
+                bsdf.inputs[7].default_value = 1.0 - (i-32) / 31  # roughness
+                bsdf.inputs[18].default_value = 0.4  # alpha
+                mat.blend_method = 'BLEND'
 
-        mat.node_tree.nodes["Image Texture"].image = bpy.data.images["{}.png".format(name)]
+            mat.node_tree.nodes["Image Texture"].image = bpy.data.images["{}.png".format(name)]
+
         materials.append(mat)
 
     return materials
@@ -39,8 +66,11 @@ def createMaterials(name, uvmap):
 
 def apply_textures(mesh, obj, materials):
 
-    for i in range(64):
-        obj.data.materials.append(materials[i])
+    if len(materials) == 64:
+        for i in range(64):
+            obj.data.materials.append(materials[i])
+    else:
+        obj.data.materials.append(materials[0])
     
     obj.data.uv_layers.new()
     loops = []
@@ -61,7 +91,7 @@ def apply_textures(mesh, obj, materials):
             else:
                 uv = (d, a, c)
 
-        if hasattr(polygon, 'intensity') and polygon.shine == 1:
+        if len(materials) == 64 and hasattr(polygon, 'intensity') and polygon.shine == 1:
             if polygon.opacity == 1:
                 blender_polygon.material_index = polygon.intensity - 1
             else:
@@ -173,16 +203,6 @@ def create_animations(rig, bonenames, animations, options):
 
         action.use_fake_user = True
 
-    if options.export_fbx:
-        bpy.ops.object.select_all(action='DESELECT')
-        rig.select_set(True)
-        bpy.context.view_layer.objects.active = rig
-        filepath = options.path + '\\{}.fbx'.format(rig.name)
-        bpy.ops.export_scene.fbx(
-            filepath=filepath, axis_forward='Z', use_selection=True,
-            add_leaf_bones=False, bake_anim_use_all_actions=True, 
-            bake_anim_use_nla_strips=False
-            )
 
     if options.create_nla:
         for idx, animation in enumerate(animations):
@@ -192,6 +212,16 @@ def create_animations(rig, bonenames, animations, options):
             track.name = str(idx)
             track.strips.new(action.name, start=0, action=action)
 
+    if options.export_fbx:
+        bpy.ops.object.select_all(action='DESELECT')
+        rig.select_set(True)
+        bpy.context.view_layer.objects.active = rig
+        filepath = options.path + '\\{}.fbx'.format(rig.name)
+        bpy.ops.export_scene.fbx(
+            filepath=filepath, axis_forward='Z', use_selection=True,
+            add_leaf_bones=False, bake_anim_use_all_actions=False, 
+            bake_anim_use_nla_strips=True
+            )
 
 def extract_pivot_points(meshnames, joints, scale):
     root_name = meshnames[0]

@@ -44,7 +44,8 @@ def main(materials, wad, options):
         bpy.context.view_layer.objects.active = obj
         mesh.from_pydata(verts, [], faces)
         apply_textures(m, obj, materials)
-        #mesh.flip_normals()
+        if options.flip_normals:
+            mesh.flip_normals()
         paint_vertex(obj)
 
         if options.rotate:
