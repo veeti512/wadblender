@@ -2,7 +2,7 @@
 
 ### Extract animations
 
-* See [https://www.youtube.com/watch?v=4VjNKavyO1o](Video Tutorial).
+* See [Video Tutorial](https://www.youtube.com/watch?v=4VjNKavyO1o).
 
 * Search the installation directory of TRAOD. In the Data/Maps directory there are many files with CLZ extension. Let's take PARIS1.GMX.CLZ and copy it on the TRAODAE directory
 
@@ -16,7 +16,7 @@
 
 ### Import animation into WADBlender
 
-* See [https://www.youtube.com/watch?v=9W-9UTJ_Oh8](Video Tutorial).
+* See [Video Tutorial](https://www.youtube.com/watch?v=9W-9UTJ_Oh8).
 
 * Open Blender and import->TRLE Wad File -> Import: Lara Full model. You can uncheck import animations. Once imported unhide the LARA collection.
 
