@@ -1,6 +1,5 @@
 # WAD Blender
-Addon to import Tomb Raider Level Editor objects and animations into Blender.
-This is the file to upload to Adobe Mixamo: https://drive.google.com/file/d/1-rtIi-6teFd4DU-XKpcWlLyrjmlnoYG4/view?usp=sharing
+Addon to import Tomb Raider Level Editor objects and animations into Blender and export them into Wad Tool or Unity.
 
 ## Download and Install
 * Click on the green Code button and download zip;
