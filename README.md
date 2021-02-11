@@ -40,14 +40,11 @@ You can show the WADBlender entry in the N panel when in edit mode. Set the sele
 
 * Go to mixamo.com and upload [this FBX file](https://drive.google.com/file/d/1fcfc7URO3I4XuOO9_fDoMsNhYTH8sDV6/view?usp=sharing) as charater.
 * Select the animation you want to import, and download it with default settings (30 fps, FBX with skin).
-* From File -> Import select Mixamo to TRLE and choose the downloaded file.
-* From File -> Export select TRLE animation and choose a file name. If you overwrite an existing anim file, WADBlender will keep its commands, state changes, etc
+* From File -> Import select Mixamo to TRLE and choose the downloaded file. Be sure to have a Lara Full Model imported so that you can select it as the target RIG.
+* From File -> Export select TRLE animation and choose a file name. If you overwrite an existing anim file, WADBlender will keep its commands, state changes, etc Be sure to select the correct action from the active actions list!
 * [Video Tutorial](https://www.youtube.com/watch?v=ErSYyMgzUS4)
 
-## Features
-* Import rigged Lara model (skin + skin joints + animations)
-* Import rigged Movables (shine and opacity included) and animations
-* Import statics with lighting information
-* Batch Export objects and animations in FBX and OBJ format
-* Export animation data (dispatches, commands, etc) as json file
-* Import Mixamo animations into Wad Tool
+### Import Animations from other sources:
+* WADBlender includes the KeeMap addon that transfers animations to different rigs.
+* Few modifications were made for WAD Blender skeletons compatibility. There are some additional options for inverting rotation angles and location coordinates.
+* See tutorial.md for importing Tomb Raider Angel of Darkness Animations.
