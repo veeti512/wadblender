@@ -5,6 +5,7 @@ Addon to import Tomb Raider Level Editor objects and animations into Blender and
 * Click on the green Code button and download zip;
 * Open Blender and from the edit menu select Preferences;
 * Select the Addons tab and click on Install... select the downloaded zip file and click on the WAD Blender checkbox.
+* When updating, it may happen that blender python cache does not update. In that case, locate the addon folder (it is inside blender\2.90\scripts\addons\wadblender ) and delete the __pycache__ folder.
 
 ## Usage
 
@@ -45,6 +46,6 @@ You can show the WADBlender entry in the N panel when in edit mode. Set the sele
 * [Video Tutorial](https://www.youtube.com/watch?v=ErSYyMgzUS4)
 
 ### Import Animations from other sources:
-* WADBlender includes the KeeMap addon that transfers animations to different rigs.
-* Few modifications were made for WAD Blender skeletons compatibility. There are some additional options for inverting rotation angles and location coordinates.
-* See tutorial.md for importing Tomb Raider Angel of Darkness Animations.
+* WADBlender includes the [Blender Rig Retargeting Addon](https://github.com/nkeeline/Keemap-Blender-Rig-ReTargeting-Addon) that allows mapping motions of one rig to another.
+* Few modifications were made for compatibility with WADBlender skeletons. There are also some additional options for inverting rotation angles and location coordinates.
+* See [Tutorial](https://github.com/veeti512/wadblender/blob/master/tutorial.md) for importing Tomb Raider Angel of Darkness Animations.
