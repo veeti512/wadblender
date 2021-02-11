@@ -2,7 +2,7 @@
 
 ### Extract animations
 
-* See [Video Tutorial](https://www.youtube.com/watch?v=4VjNKavyO1o).
+* See [Video Tutorial part 1](https://www.youtube.com/watch?v=4VjNKavyO1o).
 
 * Search the installation directory of TRAOD. In the Data/Maps directory there are many files with CLZ extension. Let's take PARIS1.GMX.CLZ and copy it on the TRAODAE directory
 
@@ -16,7 +16,7 @@
 
 ### Import animation into WADBlender
 
-* See [Video Tutorial](https://www.youtube.com/watch?v=9W-9UTJ_Oh8).
+* See [Video Tutorial part 2](https://www.youtube.com/watch?v=9W-9UTJ_Oh8).
 
 * Open Blender and import->TRLE Wad File -> Import: Lara Full model. You can uncheck import animations. Once imported unhide the LARA collection.
 
@@ -24,7 +24,7 @@
 
 * Select both the LARA_RIG and the imported Armature RIG (hold shift to multiselect) and go into pose mode
 
-* Press N and select the KeeMapRig tab. Click on the folder icon and select the lara_aod_retarget.json file and click Accept. Click on Read In Bone Mapping File button.
+* Press N and select the KeeMapRig tab. Click on the folder icon and select the [lara_aod_retarget.json](https://drive.google.com/file/d/1EJkKPOPDhwTTu52c7WFjc1Iz2HHYlVYj/view?usp=sharing) file and click Accept. Click on Read In Bone Mapping File button.
 
 * Set the number of frames field to 150. Then, click on the Transfer Animation from Source to Destination.
 
