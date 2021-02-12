@@ -24,8 +24,9 @@ Options:
 * **Import Animations**: import Lara and Movables animations as Blender actions and NLA strips.
 * **Scale**: if set to 512, one TRLE block (4 clicks) corresponds to 2 meters.
 * **Batch Export Objects and Animations (FBX)**: save wad objects and animations in FBX file format.
-* **Batch Export Objects (OBJ)**: save wad objects in FBX file format.
+* **Batch Export Objects (OBJ)**: save wad objects in OBJ file format.
 * **Batch Export Additional Data (JSON)**: save a json file for each object. Each file include information such as state changes, speed and commands. It may be useful to generate a Unity state machine animation controller.
+* **Install Numpy**: click on this button to install a library that speeds up the loading of large texture maps.
 
 Notes:
 * Be careful when importing multiple wads into the same Blender workspace since name conflicts may occur.
