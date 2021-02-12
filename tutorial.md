@@ -18,7 +18,7 @@
 
 * See [Video Tutorial part 2](https://www.youtube.com/watch?v=9W-9UTJ_Oh8).
 
-* Open Blender and import->TRLE Wad File -> Import: Lara Full model. You can uncheck import animations. Once imported unhide the LARA collection.
+* Open Blender and import->TRLE Wad File -> Import: Lara Full model and import a wad of your choice (e.g. tut1.wad). You can uncheck import animations. Once imported unhide the LARA collection.
 
 * From the import menu select import FBX. In the Transform->Scale option insert the value 0.2. Select the animation file and click on Import FBX
 
