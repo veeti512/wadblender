@@ -37,8 +37,22 @@ from . import shinepanel
 from . import export_anim
 from . import import_mixamo
 from . import objects as object_names
-from .common import createMaterials
-from .preview import preview
+from . import preview
+
+importlib.reload(developer_utils)
+importlib.reload(movables)
+importlib.reload(statics)
+importlib.reload(common)
+importlib.reload(lara)
+importlib.reload(read)
+importlib.reload(data)
+importlib.reload(model)
+importlib.reload(import_mixamo)
+importlib.reload(preview)
+importlib.reload(object_names)
+importlib.reload(shinepanel)
+importlib.reload(export_anim)
+
 
 # TODO PUT THESE SOMEWHERE ELSE
 has_numpy = [True]
@@ -51,7 +65,7 @@ bl_info = {
     "name": "WAD Blender",
     "description": "Import Tomb Raider 4 Objects and animations into Blender",
     "author": "Bergus",
-    "version": (0, 0, 3),
+    "version": (0, 0, 4),
     "blender": (2, 90, 1),
     "location": "import.wad",
     "warning": "This addon is still in development.",
@@ -78,15 +92,7 @@ for currentModuleFullName in modulesFullNames.values():
 
 # reload submodules
 
-importlib.reload(developer_utils)
-importlib.reload(movables)
-importlib.reload(statics)
-importlib.reload(common)
-importlib.reload(lara)
-importlib.reload(read)
-importlib.reload(data)
-importlib.reload(model)
-importlib.reload(import_mixamo)
+
 modules = developer_utils.setup_addon_modules(__path__, __name__, "bpy" in locals())
 
 objects = []
@@ -120,7 +126,7 @@ def import_wad(context, type, options):
     uvmap.pixels = wad.textureMap
     texture_path = options.path + options.wadname + ".png"
     bpy.data.images["textures"].save_render(texture_path)
-    materials = createMaterials(options, texture_path)
+    materials = common.createMaterials(options, texture_path)
 
     if not options.single_object:
         if type == 'OPT_A' or type == 'OPT_D':
@@ -283,7 +289,7 @@ class ImportWAD(Operator, ImportHelper):
                 is_wad = self.properties.filepath[-4:] in {'.wad', '.WAD'}
                 if is_wad:
                     with open(self.properties.filepath, "rb") as f:
-                        movables, statics = preview(f)
+                        movables, statics = preview.preview(f)
                         files[self.properties.filepath] = movables + statics
                         objects.clear()
                         objects.extend(files[self.properties.filepath])
