@@ -1,16 +1,13 @@
 from . import model
 from . import data
 from importlib import reload
-import io
-from .objects import movable_names
-from .objects import static_names
 
 
-def preview(f):
+def preview(f, movable_names, static_names):
     reload(model)
     reload(data)
 
-    version = data.read_uint32(f)
+    data.read_uint32(f)
     texture_samples_count = data.read_uint32(f)
     f.read(8 * texture_samples_count)
     bytes_size = data.read_uint32(f)
@@ -34,10 +31,23 @@ def preview(f):
 
     movables_count = data.read_uint32(f)
     movables_data = [data.Movable.decode(f) for _ in range(movables_count)]
-    movables = [movable_names[mov.obj_ID] for mov in movables_data]
+    movables = []
+    for mov in movables_data:
+        idx = str(mov.obj_ID)
+        if idx in movable_names:
+            movables.append(movable_names[idx])
+        else:
+            movables.append('MOVABLE' + idx)
+
 
     statics_count = data.read_uint32(f)
     statics_data = [data.Static.decode(f) for _ in range(statics_count)]
-    statics = [static_names[stat.obj_ID] for stat in statics_data]
+    statics = []
+    for stat in statics_data:
+        idx = str(stat.obj_ID)
+        if idx in static_names:
+            statics.append(static_names[idx])
+        else:
+            statics.append('STATIC' + idx)
 
     return movables, statics

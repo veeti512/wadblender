@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 import struct
-import io
 from typing import List
-from collections import Counter
 from math import pi
 
 

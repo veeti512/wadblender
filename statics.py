@@ -1,7 +1,6 @@
 import bpy
 import math
 
-from .objects import static_names
 from .common import apply_textures
 
 
@@ -19,7 +18,6 @@ def paint_vertex(obj):
 
 
 def main(materials, wad, options):
-
     main_collection = bpy.data.collections.get('Collection')
     if bpy.data.collections.find('Statics') == -1:
         col = bpy.data.collections.new('Statics')
@@ -30,7 +28,12 @@ def main(materials, wad, options):
         main_collection.children.link(col)
 
     for static in wad.statics:
-        name = static_names[static.idx]
+        idx = str(static.idx)
+        if idx in options.static_names:
+            name = options.static_names[idx]
+        else:
+            name = 'STATIC' + idx
+            
         if options.single_object and name != options.object:
             continue
 
@@ -48,11 +51,10 @@ def main(materials, wad, options):
             mesh.flip_normals()
         paint_vertex(obj)
 
-        if options.rotate:
-            bpy.context.object.select_set(True)
-            bpy.context.object.rotation_euler[0] = -math.pi/2
-            bpy.context.object.rotation_euler[2] = -math.pi
-            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        bpy.context.object.select_set(True)
+        bpy.context.object.rotation_euler[0] = -math.pi/2
+        bpy.context.object.rotation_euler[2] = -math.pi
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         if options.export_fbx:
             bpy.ops.object.select_all(action='DESELECT')

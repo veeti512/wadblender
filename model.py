@@ -1,4 +1,4 @@
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 from dataclasses import dataclass
 from typing import List, Tuple, Dict
 
@@ -14,14 +14,6 @@ class Polygon:
     intensity: int  # [0..31]
     shine: int  # on/off 1/0
     opacity: int
-
-    """
-    If opacity = 0, the texture is considered opaque ao =  the
-    magenta colour is used to mark pixels that are to be made fully transparent.
-
-    If opacity = 1, then colours are treated as translucent, after
-    converting the magenta colour, if any, to black.
-    """
 
 
 @dataclass

@@ -1,9 +1,8 @@
-import bpy
-from mathutils import Vector, Euler
-from collections import defaultdict
 import json
+import bpy
+from collections import defaultdict
 from typing import List, Tuple, Dict
-import math
+from mathutils import Euler
 
 def createMaterials(options, uvmap):
     name = options.wadname
@@ -21,9 +20,9 @@ def createMaterials(options, uvmap):
             texImage.image = bpy.data.images.load(uvmap)
             mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
             mat.node_tree.nodes["Image Texture"].interpolation = 'Closest'
-            bpy.ops.image.open(filepath=uvmap, files=[{"name": "{}.png".format(name)}])
+            bpy.ops.image.open(filepath=uvmap)
             mat.blend_method = 'OPAQUE'
-            mat.node_tree.nodes["Image Texture"].image = bpy.data.images["{}.png".format(name)]
+            mat.node_tree.nodes["Image Texture"].image = bpy.data.images[name]
             materials.append(mat)
 
         return materials
@@ -124,7 +123,14 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
         bone = amt.edit_bones.new(bonename)
         bone.head = pivot_points[node]
         x, y, z = pivot_points[node]
-        bone.tail = (x, y + 100 / scale, z)
+
+
+
+        if 'foot' in bonename:
+            bone.tail = (x, y + 100 / scale, z)
+        else:
+            bone.tail = (x, y + 45 / scale, z)
+
 
         if parent is not None:
             parent = next(
@@ -163,13 +169,16 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
         modifier.object = rig
 
 
-def create_animations(rig, bonenames, animations, options):
+def create_animations(item_idx, rig, bonenames, animations, options):
     if rig.animation_data is None:
         rig.animation_data_create()
 
     for idx, animation in enumerate(animations):
-        action = bpy.data.actions.new(str(idx).zfill(3))
-        action.name = rig.name + str(idx).zfill(3)
+        if item_idx in options.anim_names and str(idx) in options.anim_names[item_idx]:
+            name = ' - '.join((rig.name, str(idx).zfill(3), options.anim_names[item_idx][str(idx)])) 
+        else:
+            name = ' - '.join((rig.name, str(idx).zfill(3))) 
+        action = bpy.data.actions.new(name)
 
         offsets = [keyframe.offset for keyframe in animation.keyFrames]
         rotations = defaultdict(list)
@@ -204,13 +213,11 @@ def create_animations(rig, bonenames, animations, options):
         action.use_fake_user = True
 
 
-    if options.create_nla:
-        for idx, animation in enumerate(animations):
-            track = rig.animation_data.nla_tracks.new()
-            name = rig.name + str(idx).zfill(3)
-            action = bpy.data.actions[name]
-            track.name = str(idx)
-            track.strips.new(action.name, start=0, action=action)
+        track = rig.animation_data.nla_tracks.new()
+        name = action.name
+        action = bpy.data.actions[name]
+        track.name = name
+        track.strips.new(action.name, start=0, action=action)
 
     if options.export_fbx:
         bpy.ops.object.select_all(action='DESELECT')
@@ -253,7 +260,9 @@ def extract_pivot_points(meshnames, joints, scale):
     return pivot_points
 
 
-def save_animations_data(animations, path, filename, animationsfile='', statesfile=''):
+def save_animations_data(item_idx, animations, filename, options):
+    path = options.path
+
     states = set()
     for idx, a in enumerate(animations):
         states.add(a.stateID)
@@ -274,19 +283,8 @@ def save_animations_data(animations, path, filename, animationsfile='', statesfi
 
     saves = {}
 
-    animations_names = []
-    if animationsfile:
-        with open(animationsfile, 'r') as f:
-            for line in f:
-                animations_names.append(line.strip())
-
-    states_names = {}
-    if statesfile:
-        with open(statesfile, 'r') as f:
-            for line in f:
-                idx, name = line.split()
-                idx = idx.zfill(3)
-                states_names[idx] = name
+    animations_names = options.anim_names
+    states_names = options.state_names
 
     for state in states:
         animations_state = []
@@ -296,8 +294,11 @@ def save_animations_data(animations, path, filename, animationsfile='', statesfi
 
             data = AnimationData()
             data.idx = str(idx).zfill(3)
-            if animationsfile:
-                data.name = animations_names[idx]
+            str_idx = str(idx)
+            if str_idx in animations_names[item_idx]:
+                data.name = animations_names[item_idx][str_idx]
+            else:
+                data.name = data.idx
             data.frameDuration = a.frameDuration
             data.speed = a.speed
             data.acceleration = a.acceleration
@@ -327,10 +328,10 @@ def save_animations_data(animations, path, filename, animationsfile='', statesfi
             animations_state.append(data.__dict__)
 
         s = str(state).zfill(3)
-        if statesfile:
-            saves[s] = states_names[s], animations_state
+        if item_idx in states_names and str(state) in states_names[item_idx]:
+            saves[s] = states_names[item_idx][str(state)], animations_state
         else:
-            saves[s] = animations_state
+            saves[s] = 'UNKNOWN_STATE', animations_state
 
     with open(path + '\\' + filename + '.json', 'w') as f:
         json.dump(saves, f)

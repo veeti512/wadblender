@@ -1,9 +1,8 @@
 import bpy
 import math
 
-from .objects import movable_names, movables2discard
+from .objects import movables2discard
 from .common import apply_textures, create_animations, save_animations_data
-import bmesh
 
 def main(materials, wad, options):
 
@@ -19,7 +18,11 @@ def main(materials, wad, options):
         main_collection.children.link(col_movables)
 
     for i, movable in enumerate(wad.movables):
-        name = movable_names[movable.idx]
+        idx = str(movable.idx)
+        if idx in options.mov_names:
+            name = options.mov_names[idx]
+        else:
+            name = 'MOVABLE' + idx
 
         if options.single_object and name != options.object:
             continue
@@ -55,8 +58,6 @@ def main(materials, wad, options):
                 for v, normal in zip(mesh_data.vertices, m.normals):
                     v.normal = normal
 
-
-            #bpy.ops.object.mode_set(mode='OBJECT')
             apply_textures(m, mesh_obj, materials)
             if options.flip_normals:
                 mesh_data.flip_normals()
@@ -95,78 +96,65 @@ def main(materials, wad, options):
                 mesh_obj.location = cpivot_points[cur]
                 prev = cur
 
-            amt = bpy.data.armatures.new(name)
-            rig = bpy.data.objects.new(name + '_RIG', amt)
-            collection.objects.link(rig)
-            bpy.context.view_layer.objects.active = rig
+        amt = bpy.data.armatures.new(name)
+        rig = bpy.data.objects.new(name + '_RIG', amt)
+        collection.objects.link(rig)
+        bpy.context.view_layer.objects.active = rig
 
-            bpy.ops.object.mode_set(mode='EDIT')
-            for cur in meshnames:
-                if cur not in parents:
+        bpy.ops.object.mode_set(mode='EDIT')
+        for cur in meshnames:
+            if cur not in parents:
+                bone = amt.edit_bones.new(cur)
+                bone.head, bone.tail = (0., 0., 0.), (0., 100 / options.scale, 0.)
+                bone = None
+            else:
+                tail = [child for child, parent in parents.items() if parent == cur]
+                
+                if len(tail) > 0:
                     bone = amt.edit_bones.new(cur)
-                    bone.head, bone.tail = (0., 0., 0.), (0., 100 / options.scale, 0.)
+                    bone.head, bone.tail = cpivot_points[cur], cpivot_points[tail[0]]
+                    x, y, z = cpivot_points[cur]
+                    bone.head, bone.tail = cpivot_points[cur], (x, y + 100 / options.scale, z)
+                    bone.parent = amt.edit_bones[parents[cur]]
+                    if bone.head == bone.tail:
+                        bone.tail[1] += 0.001
                     bone = None
                 else:
-                    tail = [child for child, parent in parents.items() if parent == cur]
-                    
-                    if len(tail) > 0:
-                        bone = amt.edit_bones.new(cur)
-                        bone.head, bone.tail = cpivot_points[cur], cpivot_points[tail[0]]
-                        x, y, z = cpivot_points[cur]
-                        bone.head, bone.tail = cpivot_points[cur], (x, y + 100 / options.scale, z)
-                        bone.parent = amt.edit_bones[parents[cur]]
-                        if bone.head == bone.tail:
-                            bone.tail[1] += 0.001
-                        bone = None
-                    else:
-                        bone = amt.edit_bones.new(cur)
-                        x, y, z = cpivot_points[cur]
-                        bone.head, bone.tail = cpivot_points[cur], (x, y + 100 / options.scale, z)
-                        bone.parent = amt.edit_bones[parents[cur]]
-                        bone = None
+                    bone = amt.edit_bones.new(cur)
+                    x, y, z = cpivot_points[cur]
+                    bone.head, bone.tail = cpivot_points[cur], (x, y + 100 / options.scale, z)
+                    bone.parent = amt.edit_bones[parents[cur]]
+                    bone = None
 
-            bone = None
-            bpy.ops.object.mode_set(mode="OBJECT")
+        bone = None
+        bpy.ops.object.mode_set(mode="OBJECT")
 
-            for i in range(len(meshes)):
-                mesh = meshes[i]
-                bonename = mesh.name
-                mesh.vertex_groups.new(name=bonename)
-                mesh = None
-                
-            for i in range(len(meshes)):
-                mesh = meshes[i]
-                bonename = mesh.name
-                vertices = [vert.index for vert in mesh.data.vertices]
-                mesh.vertex_groups[bonename].add(vertices, 1.0, "ADD")
-                mesh.parent = rig
-                modifier = mesh.modifiers.new(type='ARMATURE', name=rig.name)
-                modifier.object = rig
+        for i in range(len(meshes)):
+            mesh = meshes[i]
+            bonename = mesh.name
+            mesh.vertex_groups.new(name=bonename)
+            mesh = None
+            
+        for i in range(len(meshes)):
+            mesh = meshes[i]
+            bonename = mesh.name
+            vertices = [vert.index for vert in mesh.data.vertices]
+            mesh.vertex_groups[bonename].add(vertices, 1.0, "ADD")
+            mesh.parent = rig
+            modifier = mesh.modifiers.new(type='ARMATURE', name=rig.name)
+            modifier.object = rig
 
 
 
-            if options.import_anims:
-                create_animations(rig, meshnames, animations[name], options)
+        if options.import_anims:
+            create_animations(idx, rig, meshnames, animations[name], options)
 
-            if options.export_json:
-                save_animations_data(animations[name], options.path, name)
-        
+        if options.export_json:
+            save_animations_data(idx, animations[name], name, options)
 
-            # bpy.context.view_layer.objects.active = rig
-
-            if options.rotate:
-                rig.rotation_euler[0] = -math.pi/2
-                rig.rotation_euler[2] = -math.pi
-                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-        else:
-            if options.rotate:
-                for obj in collection.objects:
-                    bpy.context.view_layer.objects.active = obj
-                    
-                bpy.context.object.rotation_euler[0] = -math.pi/2
-                bpy.context.object.rotation_euler[2] = -math.pi
-                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-
+        rig.rotation_euler[0] = -math.pi/2
+        rig.rotation_euler[2] = -math.pi
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         if options.export_fbx:
             filepath = options.path + '\\{}.fbx'.format(name)
