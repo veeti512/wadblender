@@ -1,4 +1,5 @@
 import math
+
 import bpy
 from bpy.types import Operator
 from bpy.props import StringProperty, EnumProperty

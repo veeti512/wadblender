@@ -1,23 +1,22 @@
 import bpy
 import math
 
-from .common import apply_textures
+from .create_materials import apply_textures, pack_textures
 
 
 def paint_vertex(obj):
     mesh = obj.data
-    if mesh.vertex_colors:
-        vcol_layer = mesh.vertex_colors.active
-    else:
-        vcol_layer = mesh.vertex_colors.new()
+
+    vcol_layer = mesh.vertex_colors.new(name='shade')
 
     for poly in mesh.polygons:
         for loop_index in poly.loop_indices:
             loop_vert_index = mesh.loops[loop_index].vertex_index
-            vcol_layer.data[loop_index].color = [1 - obj['shades'][loop_vert_index] / 255, ] * 3 + [1.0]
+            shade = 1 - obj['shades'][loop_vert_index] / 255
+            vcol_layer.data[loop_index].color = [1 - shade, ] * 3 + [1.0]
 
 
-def main(materials, wad, options):
+def main(context, materials, wad, options):
     main_collection = bpy.data.collections.get('Collection')
     if bpy.data.collections.find('Statics') == -1:
         col = bpy.data.collections.new('Statics')
@@ -33,7 +32,7 @@ def main(materials, wad, options):
             name = options.static_names[idx]
         else:
             name = 'STATIC' + idx
-            
+
         if options.single_object and name != options.object:
             continue
 
@@ -46,7 +45,10 @@ def main(materials, wad, options):
         col.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
         mesh.from_pydata(verts, [], faces)
-        apply_textures(m, obj, materials)
+        if options.one_material_per_object:
+            pack_textures(context, [m], [obj], options, name)
+        else:
+            apply_textures(context, m, obj, materials, options, name)
         if options.flip_normals:
             mesh.flip_normals()
         paint_vertex(obj)
@@ -60,13 +62,16 @@ def main(materials, wad, options):
             bpy.ops.object.select_all(action='DESELECT')
             bpy.context.object.select_set(True)
             filepath = options.path + '\\{}.fbx'.format(name)
-            bpy.ops.export_scene.fbx(filepath=filepath, axis_forward='Z', use_selection=True, add_leaf_bones=False, bake_anim_use_all_actions =False)
+            bpy.ops.export_scene.fbx(filepath=filepath, axis_forward='Z',
+                                     use_selection=True, add_leaf_bones=False,
+                                     bake_anim_use_all_actions=False)
 
         if options.export_obj:
             bpy.ops.object.select_all(action='DESELECT')
             bpy.context.object.select_set(True)
             filepath = options.path + '\\{}.obj'.format(name)
-            bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
+            bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z',
+                                     use_selection=True)
 
         if not options.single_object:
             obj.hide_set(True)

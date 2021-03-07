@@ -14,6 +14,14 @@ class Polygon:
     intensity: int  # [0..31]
     shine: int  # on/off 1/0
     opacity: int
+    page: int
+    tex_width: int
+    tex_height: int
+    flipX: bool
+    flipY: bool
+    origin: int
+    x: int
+    y: int
 
 
 @dataclass
@@ -71,3 +79,4 @@ class Wad:
     mapheight: int
     textureMap: List[float]
     movables: List[Movable]
+    textureMaps: List[List[float]]

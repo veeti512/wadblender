@@ -1,10 +1,9 @@
+import io
 from . import model
 from . import data
-from importlib import reload
-import io
 
 
-def read_mesh(mesh, texture_samples, map_width, map_height):
+def read_mesh(mesh, texture_samples, map_width, map_height, options):
     vertices = [(e.vx, e.vy, e.vz) for e in mesh["vertices"]]
     normals = [(e.vx, e.vy, e.vz) for e in mesh["normals"]]
     bs = mesh["bounding_sphere"]
@@ -15,13 +14,22 @@ def read_mesh(mesh, texture_samples, map_width, map_height):
     for polygon in mesh["polygons"]:
         tex = texture_samples[polygon.texture_index]
 
-        # top left in uv coordinates
-        x0 = tex.mapX / map_width
-        y0 = 1 - tex.mapY / map_height
+        if options.texture_pages:
+            # top left in uv coordinates
+            x0 = tex.x / 256
+            y0 = 1 - tex.y / 256
 
-        # bottom right in uv coordinates
-        x1 = (tex.mapX + tex.width) / map_width
-        y1 = 1 - (tex.mapY + tex.height) / map_height
+            # bottom right in uv coordinates
+            x1 = (tex.x + tex.width) / 256
+            y1 = 1 - (tex.y + tex.height) / 256
+        else:
+            # top left in uv coordinates
+            x0 = tex.mapX / map_width
+            y0 = 1 - tex.mapY / map_height
+
+            # bottom right in uv coordinates
+            x1 = (tex.mapX + tex.width) / map_width
+            y1 = 1 - (tex.mapY + tex.height) / map_height
 
         """
         a         b
@@ -36,8 +44,10 @@ def read_mesh(mesh, texture_samples, map_width, map_height):
         b = (x1, y0)
         c = (x1, y1)
         d = (x0, y1)
-        uvrect = [a, b, c, d]
 
+
+        uvrect = [a, b, c, d]
+        flipX = tex.flipX
         if tex.flipX == 0:
             uvrect = [b, a, d, c]
 
@@ -45,14 +55,31 @@ def read_mesh(mesh, texture_samples, map_width, map_height):
             uvrect = [d, c, b, a]
 
         if polygon.texture_flipped == 1:
+            flipX = not flipX
             uvrect = [b, a, d, c]
+
+        sample = tex
+        x, y, w, h = sample.mapX, sample.mapY, sample.width, sample.height
+        assert x + w <= map_width and y + h <= map_height
+
+        assert tex.mapX + tex.width <= map_width
+        assert tex.mapY + tex.height <= map_height
 
         poly_model = model.Polygon(polygon.vertices,
                                    uvrect,
                                    polygon.texture_shape,
                                    polygon.intensity,
                                    polygon.shine,
-                                   polygon.opacity)
+                                   polygon.opacity,
+                                   tex.page,
+                                   tex.width,
+                                   tex.height,
+                                   not flipX,
+                                   not tex.flipY,
+                                   a,
+                                   tex.mapX,
+                                   tex.mapY,
+                                   )
 
         polygons.append(poly_model)
 
@@ -60,10 +87,7 @@ def read_mesh(mesh, texture_samples, map_width, map_height):
                       bounding_sphere_center, bounding_sphere_radius, shades)
 
 
-def readWAD(f):
-    reload(model)
-    reload(data)
-
+def readWAD(f, options):
     version = data.read_uint32(f)
     assert 129 <= version <= 130
 
@@ -80,7 +104,12 @@ def readWAD(f):
     bytes_size = data.read_uint32(f)
     map_width = 256
     map_height = bytes_size // 256 // 3
-    texture_map = data.read_texture_map(f, bytes_size, map_width, map_height)
+    texture_map, raw_data = data.read_texture_map(f, bytes_size, map_width, map_height)
+    if options.texture_pages:
+        textureMaps = data.read_splitted_texture_map(raw_data, bytes_size, map_width, map_height)
+    else:
+        textureMaps = []
+
     _pages_count = bytes_size // 256 // 256 // 3
 
     for sample in texture_samples:
@@ -352,7 +381,7 @@ def readWAD(f):
                         if mesh["idx"] == mesh_pointer)
 
         mesh = read_mesh(mesh_data[mesh_idx],
-                         texture_samples, map_width, map_height)
+                         texture_samples, map_width, map_height, options)
         statics_model.append(model.Static(static.obj_ID, mesh))
 
     movables_model = []
@@ -360,11 +389,11 @@ def readWAD(f):
         meshesTO = [mesh_data[i] for i in movable['mesh_indices']]
         meshes = []
         for meshto in meshesTO:
-            mesh = read_mesh(meshto, texture_samples, map_width, map_height)
+            mesh = read_mesh(meshto, texture_samples, map_width, map_height, options)
             meshes.append(mesh)
 
         movable = model.Movable(
             movable['idx'], meshes, movable['links'], movable['animations'])
         movables_model.append(movable)
 
-    return model.Wad(version, statics_model, map_width, map_height, texture_map, movables_model)
+    return model.Wad(version, statics_model, map_width, map_height, texture_map, movables_model, textureMaps)

@@ -3,7 +3,6 @@ import struct
 from typing import List
 from math import pi
 
-
 def read_uint32(f):
     return struct.unpack('I', f.read(4))[0]
 
@@ -19,10 +18,21 @@ def read_uint16(f):
 def read_int16(f):
     return struct.unpack('h', f.read(2))[0]
 
+def split(test_image):
+    import numpy as np
+    # Crop out the window and calculate the histogram
+    pages = []
+    for r in range(0, test_image.shape[0], 256):
+        page = test_image[r:r+256, 0:256]
+        page = np.flipud(page)
+        page = page.astype(float)
+        page /= 255
+        pages.append(page.flatten().tolist())
+
+    return pages
 
 def read_texture_map(f, texture_byte_size, map_width, map_height):
     """texture map is stored as a standard RAW 24bits [RGB] pixel file"""
-
 
     try:
         import numpy as np
@@ -32,23 +42,25 @@ def read_texture_map(f, texture_byte_size, map_width, map_height):
 
     raw_data = f.read(texture_byte_size)
 
-
     if HAS_NUMPY:
         im = np.frombuffer(raw_data, dtype='uint8')
         im = np.reshape(im, (map_height, map_width, 3))
-        data = np.dstack((im, np.zeros((map_height,map_width),dtype=np.uint8)+255))
-        r1, g1, b1 = 255, 0, 255 # Original value
-        r2, g2, b2, a2 = 0, 0, 0, 0 # Value that we want to replace it with
+        data = np.dstack(
+            (im, np.zeros((map_height, map_width), dtype=np.uint8)+255))
+        r1, g1, b1 = 255, 0, 255  # Original value
+        r2, g2, b2, a2 = 0, 0, 0, 0  # Value that we want to replace it with
 
-        red, green, blue, alpha = data[:,:,0], data[:,:,1], data[:,:,2], data[:,:,3]
+        red, green, blue, alpha = data[:, :, 0], data[:,
+                                                      :, 1], data[:, :, 2], data[:, :, 3]
         mask = (red == r1) & (green == g1) & (blue == b1)
-        data[:,:,:4][mask] = [r2, g2, b2, a2]
+        data[:, :, :4][mask] = [r2, g2, b2, a2]
+
         data = np.flipud(data)
-        # data = np.reshape(data, (map_height * map_width, 4))
         data = data.astype(float)
         data /= 255
 
-        return data.flatten().tolist()
+
+        return data.flatten().tolist(), raw_data
     else:
         pixels = []
         idx = 0
@@ -73,7 +85,31 @@ def read_texture_map(f, texture_byte_size, map_width, map_height):
             for val in row:
                 img_pixels.append(val/255)
 
-        return img_pixels
+        return img_pixels, raw_data
+
+
+def read_splitted_texture_map(raw_data, texture_byte_size, map_width, map_height):
+    """texture map is stored as a standard RAW 24bits [RGB] pixel file"""
+
+    try:
+        import numpy as np
+        HAS_NUMPY = True
+    except ImportError:
+        HAS_NUMPY = False
+
+    im = np.frombuffer(raw_data, dtype='uint8')
+    im = np.reshape(im, (map_height, map_width, 3))
+    data = np.dstack(
+        (im, np.zeros((map_height, map_width), dtype=np.uint8)+255))
+    r1, g1, b1 = 255, 0, 255  # Original value
+    r2, g2, b2, a2 = 0, 0, 0, 0  # Value that we want to replace it with
+
+    red, green, blue, alpha = data[:, :, 0], data[:,
+                                                    :, 1], data[:, :, 2], data[:, :, 3]
+    mask = (red == r1) & (green == g1) & (blue == b1)
+    data[:, :, :4][mask] = [r2, g2, b2, a2]
+
+    return split(data)
 
 
 @dataclass
@@ -161,7 +197,7 @@ class Polygon():
         opacity = attributes & 0X01
 
         return Polygon(shape, vertices, texture_flipped, texture_shape,
-                         texture_index, intensity, shine, opacity)
+                       texture_index, intensity, shine, opacity)
 
 
 @dataclass

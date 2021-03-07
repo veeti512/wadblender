@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-from . import developer_utils, import_wad, shinepanel, export_anim, import_mixamo
+from . import developer_utils, import_wad, export_anim, import_mixamo, export_trw, object_panel, shine_panel
 
 from .KeemapRetargetingAddon import (KeeMapBoneList, KeeMapBoneOperators,
                                      KeeMapBoneSettings, KeeMapPanels,
@@ -28,8 +28,8 @@ bl_info = {
     "name": "WAD Blender",
     "description": "Import Tomb Raider 4 Objects and animations into Blender",
     "author": "Bergus",
-    "version": (0, 0, 5),
-    "blender": (2, 90, 1),
+    "version": (0, 0, 6),
+    "blender": (2, 90, 0),
     "location": "import.wad",
     "warning": "This addon is still in development.",
     "wiki_url": "",
@@ -38,12 +38,13 @@ bl_info = {
 
 developer_utils.setup_addon_modules(__path__, __name__, "bpy" in locals())
 
-
 def register():
     import_wad.register()
     import_mixamo.register()
     export_anim.register()
-    shinepanel.register()
+    export_trw.register()
+    object_panel.register()
+    shine_panel.register()
 
     KeeMapBoneList.register()
     KeeMapBoneOperators.register()
@@ -56,7 +57,9 @@ def unregister():
     import_wad.unregister()
     import_mixamo.unregister()
     export_anim.unregister()
-    shinepanel.unregister()
+    export_trw.unregister()
+    object_panel.unregister()
+    shine_panel.unregister()
 
     KeeMapBoneList.unregister()
     KeeMapBoneOperators.unregister()

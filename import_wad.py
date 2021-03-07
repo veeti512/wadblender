@@ -1,27 +1,32 @@
 import os
+
 import bpy
 from collections import Counter
 from bpy.types import Operator
-from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
 from bpy_extras.io_utils import ImportHelper
-from . import read, lara, common, movables, statics, objects, preview
+from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
+
+from . import lara, movables, statics, objects
+from .wad import read, preview
+from .create_materials import generateNodesSetup, createPageMaterial
 
 
-def check_numpy():
+def check_requirements():
     try:
         import numpy
+        import PIL
         return True
     except ImportError as e:
         return False
 
 
 def rename_dups(obj_names):
-    """Add obj idx to name when it appears multiple times in trcatalog"""
+    """Add obj numeric idx to name when it appears multiple times in catalog"""
     names = Counter(obj_names.values())
-    for k, v in names.items():
-        if v > 1:
+    for name, cnt in names.items():
+        if cnt > 1:
             for idx in obj_names:
-                if obj_names[idx] == k:
+                if obj_names[idx] == name:
                     obj_names[idx] += idx
 
 
@@ -32,14 +37,14 @@ class ImportWADContext:
     last_selected_file = ''
     last_objects_list = []
     cur_selected_file = ''
-    has_numpy = check_numpy()
+    has_numpy = check_requirements()
     mov_names = {}
     static_names = {}
     anim_names = {}
     state_names = {}
     for game in ['TR1', 'TR2', 'TR3', 'TR4', 'TR5', 'TR5Main']:
-        mov_names[game], static_names[game], anim_names[game], state_names[game] = objects.get_names(
-            game)
+        mov_names[game], static_names[game], \
+        anim_names[game], state_names[game] = objects.get_names(game)
         rename_dups(mov_names[game])
         rename_dups(static_names[game])
 
@@ -50,7 +55,7 @@ class ImportWADContext:
         if cls.game != game:
             cls.game = game
             cls.last_selected_file = ''
-            cls.last_objects_list = []
+            cls.last_objects_list.clear()
 
 
 class ImportWAD(Operator, ImportHelper):
@@ -66,9 +71,10 @@ class ImportWAD(Operator, ImportHelper):
         maxlen=255,
     )
 
+    # if user has choosen a single object instad of batch import
     single_object: BoolProperty(default=False)
 
-    type: EnumProperty(
+    batch_import: EnumProperty(
         name="Import",
         description="",
         items=(
@@ -80,7 +86,7 @@ class ImportWAD(Operator, ImportHelper):
         default='OPT_EVERYTHING',
     )
 
-    type_old: EnumProperty(
+    batch_import_nolara: EnumProperty(
         name="Import",
         description="",
         items=(
@@ -89,6 +95,30 @@ class ImportWAD(Operator, ImportHelper):
             ('OPT_EVERYTHING', "Everything", "Import Everything"),
         ),
         default='OPT_EVERYTHING',
+    )
+
+    texture_type: EnumProperty(
+        name="Import mode",
+        description="",
+        items=(
+            ('OPT_OBJECT', "One texture per object",
+             "Each object has its own material with its own textures only."),
+            ('OPT_PAGES', "Texture Pages",
+             "256x256 texture pages are shared across all objects"),
+            ('OPT_FULL', "Full Texture Map",
+             "The entire wad texture map is shared across all objects"),
+        ),
+        default='OPT_OBJECT',
+    )
+
+    texture_type_nolib: EnumProperty(
+        name="Import mode",
+        description="",
+        items=(
+            ('OPT_FULL', "Full Texture Map",
+             "The entire wad texture map is shared across all objects"),
+        ),
+        default='OPT_FULL',
     )
 
     scale_setting: IntProperty(
@@ -111,6 +141,12 @@ class ImportWAD(Operator, ImportHelper):
         default=True,
     )
 
+    texture_pages: BoolProperty(
+        name="Texture pages",
+        description="Split texture map in 256x256 pages",
+        default=False,
+    )
+
     export_fbx: BoolProperty(
         name="Objects and Animations (FBX)",
         description="Export objects and animations in FBX format",
@@ -129,18 +165,16 @@ class ImportWAD(Operator, ImportHelper):
         default=False,
     )
 
-    single_material: BoolProperty(
-        name="Discard Shine and Translucency",
-        description="If checked, only one material is created",
-        default=False,
-    )
-
     flip_normals: BoolProperty(
         name="Flip Normals",
-        description="If checked, faces are displayed properly when backface "
-        "culling is enabled. If checked, remember to select the invert faces "
-        "option in Tomb Editor.",
+        description="TRLE and Blender normals point to opposite directions",
         default=True,
+    )
+
+    one_material_per_object: BoolProperty(
+        name="One material per object",
+        description="If checked, each object has its own texture map and other textures are discarded",
+        default=False,
     )
 
     game: EnumProperty(
@@ -161,14 +195,14 @@ class ImportWAD(Operator, ImportHelper):
         layout = self.layout
         row = layout.row()
         row.label(text='WAD Blender', icon="BLENDER")
-
         box = layout.box()
         box.label(text="Settings", icon="SETTINGS")
+
         row = box.row(align=True)
         if self.game in {'TR1', 'TR2', 'TR3'}:
-            row.prop(self, "type_old")
+            row.prop(self, "batch_import_nolara")
         else:
-            row.prop(self, "type")
+            row.prop(self, "batch_import")
 
         row = box.row(align=True)
         row.prop(self, "discard_junk")
@@ -185,11 +219,17 @@ class ImportWAD(Operator, ImportHelper):
 
         row.prop(self, "single_object", text=ImportWADContext.selected_obj)
 
-        row = box.row(align=True)
-        row.prop(self, "single_material")
+        row = box.label(text='Materials:')
 
-        row = box.row(align=True)
-        row.prop(self, "flip_normals")
+        col = box.column()
+        if ImportWADContext.has_numpy:
+            col.prop(self, "texture_type", expand=True)
+        else:
+            col.prop(self, "texture_type_nolib", expand=True)
+
+        if not ImportWADContext.has_numpy:
+            row = layout.row()
+            row.operator("wadblender.install_requirements", icon='COLORSET_05_VEC')
 
         row = box.row(align=True)
         row.prop(self, "import_anims")
@@ -208,10 +248,6 @@ class ImportWAD(Operator, ImportHelper):
         row.prop(self, "export_obj")
         row.prop(self, "export_json")
 
-        if not ImportWADContext.has_numpy:
-            row = layout.row()
-            row.operator("wadblender.installnumpy")
-
     def execute(self, context):
 
         class ImportOptions:
@@ -228,7 +264,6 @@ class ImportWAD(Operator, ImportHelper):
         options.export_obj = self.export_obj
         options.single_object = self.single_object
         options.object = ImportWADContext.selected_obj
-        options.single_material = self.single_material
         options.flip_normals = self.flip_normals
         options.path, _ = os.path.split(options.filepath)
         options.path += '\\'
@@ -238,46 +273,83 @@ class ImportWAD(Operator, ImportHelper):
         options.anim_names = ImportWADContext.anim_names[ImportWADContext.game]
         options.state_names = ImportWADContext.state_names[ImportWADContext.game]
 
-        with open(options.filepath, "rb") as f:
-            wad = read.readWAD(f)
+        if ImportWADContext.has_numpy:
+            options.one_material_per_object = self.texture_type == 'OPT_OBJECT'
+            options.texture_pages = self.texture_type == 'OPT_PAGES'
+        else:
+            options.one_material_per_object = False
+            options.texture_pages = False
 
-        w, h = wad.mapwidth, wad.mapheight
-        uvmap = bpy.data.images.new(options.wadname, w, h, alpha=True)
-        uvmap.pixels = wad.textureMap
-        texture_path = options.path + options.wadname + ".png"
-        bpy.data.images[options.wadname].save_render(texture_path)
-        materials = common.createMaterials(options, texture_path)
+
+        with open(options.filepath, "rb") as f:
+            wad = read.readWAD(f, options)
+
+        materials = []
+        if options.texture_pages:
+            w = h = 256
+            if options.wadname + '_PAGE0' not in bpy.data.materials:
+                # create materials
+                for i, page in enumerate(wad.textureMaps):
+                    name = options.wadname + '_PAGE{}'.format(i)
+                    uvmap = bpy.data.images.new(name, w, h, alpha=True)
+                    uvmap.pixels = page
+                    texture_path = options.path + name + ".png"
+                    bpy.data.images[name].save_render(texture_path)
+                    material = createPageMaterial(texture_path, context)
+                    materials.append(material)
+            else:
+                # load existing materials
+                for i, page in enumerate(wad.textureMaps):
+                    name = options.wadname + '_PAGE{}'.format(i)
+                    material = bpy.data.materials[name]
+                    materials.append(material)
+        else:
+            # generate full texture map image
+            w, h = wad.mapwidth, wad.mapheight
+            uvmap = bpy.data.images.new(options.wadname, w, h, alpha=True)
+            uvmap.pixels = wad.textureMap
+            texture_path = options.path + options.wadname + ".png"
+            bpy.data.images[options.wadname].save_render(texture_path)
+            # create one material only if full texture option is checked
+            # otherwise materials are generated at the time of object creation
+            if not options.one_material_per_object:
+                materials = [generateNodesSetup(options.wadname, texture_path)]
 
         if options.single_object:
+            # find selected object in movable or static list
             found = False
             for idx, name in options.mov_names.items():
                 if options.object == name:
-                    movables.main(materials, wad, options)
+                    movables.main(context, materials, wad, options)
                     found = True
                     break
             else:
                 if options.object.startswith('movable'):
-                    movables.main(materials, wad, options)
+                    movables.main(context, materials, wad, options)
                     found = True
 
             if not found:
-                statics.main(materials, wad, options)
+                statics.main(context, materials, wad, options)
         else:
-            t = self.type_old if self.game in {
-                'TR1', 'TR2', 'TR3'} else self.type
+            # Batch import objects
+            # Lara option is only available for games >= TR4
+            t = self.batch_import_nolara if self.game in {
+                'TR1', 'TR2', 'TR3'} else self.batch_import
             if t == 'OPT_LARA':
-                lara.main(materials, wad, options)
+                lara.main(context, materials, wad, options)
             elif t == 'OPT_MOVABLES':
-                movables.main(materials, wad, options)
+                movables.main(context, materials, wad, options)
             elif t == 'OPT_STATICS':
-                statics.main(materials, wad, options)
+                statics.main(context, materials, wad, options)
             else:
+                # Import everything
                 if self.game not in {'TR1', 'TR2', 'TR3'}:
-                    lara.main(materials, wad, options)
+                    lara.main(context, materials, wad, options)
                     bpy.ops.object.select_all(action='DESELECT')
-                movables.main(materials, wad, options)
+
+                movables.main(context, materials, wad, options)
                 bpy.ops.object.select_all(action='DESELECT')
-                statics.main(materials, wad, options)
+                statics.main(context, materials, wad, options)
 
             bpy.ops.object.select_all(action='DESELECT')
 
@@ -286,11 +358,13 @@ class ImportWAD(Operator, ImportHelper):
         return {"FINISHED"}
 
 
+# menu entry
 def menu_func_import(self, context):
     self.layout.operator(ImportWAD.bl_idname, text="TRLE WAD file (.wad)")
 
 
 def item_cb(self, context):
+    """Populates popup search box"""
     filepath = ImportWADContext.cur_selected_file
 
     if filepath != ImportWADContext.last_selected_file:
@@ -300,7 +374,9 @@ def item_cb(self, context):
                 with open(filepath, "rb") as f:
                     game = ImportWADContext.game
                     movables, statics = preview.preview(
-                        f, ImportWADContext.mov_names[game], ImportWADContext.static_names[game])
+                        f, ImportWADContext.mov_names[game],
+                        ImportWADContext.static_names[game])
+
                     ImportWADContext.last_selected_file = filepath
                     ImportWADContext.last_objects_list.clear()
                     ImportWADContext.last_objects_list += movables + statics
@@ -336,9 +412,10 @@ class PopUpSearch(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class InstallNumpy(bpy.types.Operator):
-    bl_idname = "wadblender.installnumpy"
-    bl_label = "Install Numpy"
+class InstallRequirements(bpy.types.Operator):
+    bl_idname = "wadblender.install_requirements"
+    bl_label = "Install libraries"
+    bl_description = "Install Numpy and PIL python libraries to enable additional texture mappings and Sprytile compatibility"
 
     def execute(self, context):
         import subprocess
@@ -350,11 +427,13 @@ class InstallNumpy(bpy.types.Operator):
         # upgrade pip
         subprocess.call([python_exe, "-m", "ensurepip"])
         subprocess.call(
-            [python_exe, "-m", "pip", "install", "--upgrade", "pip"])
+            [python_exe, "-m", "pip", "install", "--upgrade", "pip"]
+        )
 
         # install required packages
         subprocess.call([python_exe, "-m", "pip", "install", "numpy"])
-        ImportWADContext.has_numpy = check_numpy()
+        subprocess.call([python_exe, "-m", "pip", "install", "pillow"])
+        ImportWADContext.has_numpy = check_requirements()
 
         return{'FINISHED'}
 
@@ -363,11 +442,11 @@ def register():
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.utils.register_class(ImportWAD)
     bpy.utils.register_class(PopUpSearch)
-    bpy.utils.register_class(InstallNumpy)
+    bpy.utils.register_class(InstallRequirements)
 
 
 def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.utils.unregister_class(ImportWAD)
     bpy.utils.unregister_class(PopUpSearch)
-    bpy.utils.unregister_class(InstallNumpy)
+    bpy.utils.unregister_class(InstallRequirements)

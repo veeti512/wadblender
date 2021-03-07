@@ -1,12 +1,7 @@
-from . import model
 from . import data
-from importlib import reload
 
 
 def preview(f, movable_names, static_names):
-    reload(model)
-    reload(data)
-
     data.read_uint32(f)
     texture_samples_count = data.read_uint32(f)
     f.read(8 * texture_samples_count)

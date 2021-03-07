@@ -1,11 +1,20 @@
-import bpy
 import math
 
+import bpy
+
 from .objects import movables2discard
-from .common import apply_textures, create_animations, save_animations_data
+from .create_materials import apply_textures, pack_textures
+from .animations import create_animations, save_animations_data
 
-def main(materials, wad, options):
+def paint_vertex(mesh):
+    vcol_layer = mesh.vertex_colors.new(name='shade')
 
+    for poly in mesh.polygons:
+        for loop_index in poly.loop_indices:
+            vcol_layer.data[loop_index].color = (0.5, 0.5, 0.5, 1.0)
+
+
+def main(context, materials, wad, options):
     movable_objects = {}
     animations = {}
     main_collection = bpy.data.collections.get('Collection')
@@ -34,7 +43,8 @@ def main(materials, wad, options):
         collection = bpy.data.collections.new(name)
         col_movables.children.link(collection)
 
-        meshes = []        
+        meshes = []
+        meshes2 = []        
         for j, m in enumerate(movable.meshes):
             verts = [[v / options.scale for v in e] for e in m.vertices]
             faces = [e.face for e in m.polygons]
@@ -58,10 +68,20 @@ def main(materials, wad, options):
                 for v, normal in zip(mesh_data.vertices, m.normals):
                     v.normal = normal
 
-            apply_textures(m, mesh_obj, materials)
-            if options.flip_normals:
-                mesh_data.flip_normals()
+            if not options.one_material_per_object:
+                apply_textures(context, m, mesh_obj, materials, options)
+                if options.flip_normals:
+                    mesh_data.flip_normals()
+            else:
+                meshes2.append(m)
+            paint_vertex(mesh_data)
             meshes.append(mesh_obj)
+
+        if options.one_material_per_object:
+            pack_textures(context, meshes2, meshes, options, name)
+            for obj in meshes:
+                if options.flip_normals:
+                    obj.data.flip_normals()
             
         movable_objects[name] = meshes
         animations[name] = movable.animations
@@ -143,8 +163,6 @@ def main(materials, wad, options):
             mesh.parent = rig
             modifier = mesh.modifiers.new(type='ARMATURE', name=rig.name)
             modifier.object = rig
-
-
 
         if options.import_anims:
             create_animations(idx, rig, meshnames, animations[name], options)

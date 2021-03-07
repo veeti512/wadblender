@@ -82,14 +82,25 @@ def export_anim(template_anim, rig_name):
             bonename = datapath[0].split('"')[1]
 
         # save bodyparts rotations
+        # axis = datapath[1]
+        # for i, bone in enumerate(lara_skin_names):
+        #     if bone in datapath[0]:
+        #         idx = i
+        #         print(idx, bone, bonename)
+        #         break
+        # else:
+        #     assert False
+
         axis = datapath[1]
-        for i, bone in enumerate(lara_skin_names):
+        for i, bone in enumerate(bonenames):
             if bone in datapath[0]:
                 idx = i
                 print(idx, bone, bonename)
                 break
         else:
             assert False
+
+        idx = bonenames.index(bone)
 
         for i in range(keyframes_count):
             rotations[idx][i][axis] = kf_points[i]

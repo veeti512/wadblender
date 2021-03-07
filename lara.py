@@ -1,13 +1,107 @@
-import bpy
 import os
 import math
 
-from .common import apply_textures, extract_pivot_points, create_lara_skeleton, create_animations, save_animations_data
+import bpy
+
+from .create_materials import apply_textures, pack_textures
+from .animations import create_animations, save_animations_data
 from .objects import lara_skin_names, lara_skin_joints_names
 
 
-def main(materials, wad, options): 
+def extract_pivot_points(meshnames, joints, scale):
+    root_name = meshnames[0]
+    parent = root_name
+    prev = parent
+    stack = [root_name] * 1000
+    pivot_points = {}
+    pivot_points[root_name] = (0., 0., 0.)
+    parents = {}
+    if len(joints) > 0:
+        for j in range(1, len(meshnames)):
+            op, dx, dy, dz = joints[j-1]
+            cur = meshnames[j]
+            if op == 0:
+                parent = prev
+            elif op == 1:
+                parent = stack.pop()
+            elif op == 2:
+                parent = prev
+                stack.append(parent)
+            else:
+                parent = stack[-1]
 
+            parents[cur] = parent
+            px, py, pz = pivot_points[parent]
+            pivot_points[cur] = (px + dx / scale, py + dy / scale, pz + dz / scale)
+            prev = cur
+
+    return pivot_points
+
+
+
+def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_meshes, bonesfile, vertexfile, scale):
+    # create bones
+    bpy.ops.object.mode_set(mode='EDIT')
+    amt = rig.data
+
+    def create_bone(node, parent=None, child=None):
+        bonename = next(
+            mesh.name + '_BONE' for mesh in lara_skin_meshes if node in mesh.name)
+        bone = amt.edit_bones.new(bonename)
+        bone.head = pivot_points[node]
+        x, y, z = pivot_points[node]
+
+        if 'foot' in bonename:
+            bone.tail = (x, y + 100 / scale, z)
+        else:
+            bone.tail = (x, y + 45 / scale, z)
+
+        if parent is not None:
+            parent = next(
+                mesh.name + '_BONE' for mesh in lara_skin_meshes if parent in mesh.name)
+            bone.parent = amt.edit_bones[parent]
+
+    with open(bonesfile, 'r') as f:
+        for line in f:
+            create_bone(*line.split())
+
+    # weight paint
+    for mesh in lara_skin_meshes:
+        bonename = mesh.name + '_BONE'
+        mesh.vertex_groups.new(name=bonename)
+        mesh.vertex_groups[bonename].add(
+            [vert.index for vert in mesh.data.vertices], 1.0, "ADD")
+        mesh.parent = rig
+        modifier = mesh.modifiers.new(type='ARMATURE', name=rig.name)
+        modifier.object = rig
+
+    with open(vertexfile, 'r') as f:
+        lines = f.readlines()
+
+    for i in range(0, len(lines), 2):
+        mesh_a, mesh_b = lines[i].split()
+        mesh_a = next(
+            mesh for mesh in lara_skin_joints_meshes if mesh_a in mesh.name)
+        mesh_b = next(mesh for mesh in lara_skin_meshes if mesh_b in mesh.name)
+        vertices = [int(c) for c in lines[i + 1].split()]
+        mesh_a.vertex_groups.new(name=mesh_b.name + '_BONE')
+        mesh_a.vertex_groups[mesh_b.name + '_BONE'].add(vertices, 1.0, "ADD")
+
+    for mesh in lara_skin_joints_meshes:
+        mesh.parent = rig
+        modifier = mesh.modifiers.new(type='ARMATURE', name=rig.name)
+        modifier.object = rig
+
+
+def paint_vertex(mesh):
+    vcol_layer = mesh.vertex_colors.new(name='shade')
+
+    for poly in mesh.polygons:
+        for loop_index in poly.loop_indices:
+            vcol_layer.data[loop_index].color = (0.5, 0.5, 0.5, 1.0)
+
+
+def main(context, materials, wad, options): 
     meshes2replace = {}
     meshes2replace['LARA'] = []
     meshes2replace['PISTOLS_ANIM'] = ['LEFT_THIGH', 'RIGHT_THIGH', 'RIGHT_HAND', 'LEFT_HAND']
@@ -53,6 +147,8 @@ def main(materials, wad, options):
         movables = {}
         pivot_points = {}
         animations = {}
+        meshes2 = []  
+        lara_objs = [] 
         for i, movable in enumerate(wad.movables):
             idx = str(movable.idx)
             if idx in options.mov_names:
@@ -91,18 +187,31 @@ def main(materials, wad, options):
                 mesh_obj = bpy.data.objects.new(mesh_name, mesh_data)
                 col.objects.link(mesh_obj)
 
-                apply_textures(m, mesh_obj, materials)
+                if not options.one_material_per_object:
+                    apply_textures(context, m, mesh_obj, materials, options)
+                    if options.flip_normals:
+                        mesh_data.flip_normals()
+                else:
+                    meshes2.append(m)
+                    lara_objs.append(mesh_obj)
 
                 mesh_objects.append(mesh_obj)
 
-                if options.flip_normals:
-                    mesh_data.flip_normals()
+
+                paint_vertex(mesh_data)
+
 
             movables[movable_name] = mesh_objects
             ppoints = extract_pivot_points(bodyparts_names, movable.joints, options.scale)
             pivot_points[movable_name] = ppoints
             for bodypart, obj in zip(bodyparts_names, mesh_objects):
                 obj.location = ppoints[bodypart]
+
+        if options.one_material_per_object:
+            pack_textures(context, meshes2, lara_objs, options, anim)
+            for obj in mesh_objects:
+                if options.flip_normals:
+                    obj.data.flip_normals()
 
         for i in range(len(movables['LARA_SKIN'])):
             if i in indices:
@@ -158,4 +267,3 @@ def main(materials, wad, options):
             save_animations_data(animations[anim], anim, options)
             
         bpy.context.view_layer.layer_collection.children['Collection'].children['Lara'].children[anim].hide_viewport = True
-
