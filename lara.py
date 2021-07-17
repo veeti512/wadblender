@@ -264,6 +264,6 @@ def main(context, materials, wad, options):
             create_animations(item_idx, rig, bonenames, animations[anim], options)
 
         if options.export_json:
-            save_animations_data(animations[anim], anim, options)
+            save_animations_data(item_idx, animations[anim], anim, options)
             
         bpy.context.view_layer.layer_collection.children['Collection'].children['Lara'].children[anim].hide_viewport = True

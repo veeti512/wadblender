@@ -103,9 +103,10 @@ def save_animations_data(item_idx, animations, filename, options):
             data = AnimationData()
             data.idx = str(idx).zfill(3)
             str_idx = str(idx)
-            if str_idx in animations_names[item_idx]:
+            if item_idx in animations_names and str_idx in animations_names[item_idx]:
                 data.name = animations_names[item_idx][str_idx]
             else:
+                
                 data.name = data.idx
             data.frameDuration = a.frameDuration
             data.speed = a.speed
