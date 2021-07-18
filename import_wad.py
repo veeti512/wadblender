@@ -248,6 +248,10 @@ class ImportWAD(Operator, ImportHelper):
         row.prop(self, "export_obj")
         row.prop(self, "export_json")
 
+        box = layout.box()
+        box.label(text="Advanced", icon="SETTINGS")
+        box.prop(self, "flip_normals")
+
     def execute(self, context):
 
         class ImportOptions:
