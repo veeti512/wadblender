@@ -106,8 +106,8 @@ def save_animations_data(item_idx, animations, filename, options):
             if item_idx in animations_names and str_idx in animations_names[item_idx]:
                 data.name = animations_names[item_idx][str_idx]
             else:
-                
                 data.name = data.idx
+
             data.frameDuration = a.frameDuration
             data.speed = a.speed
             data.acceleration = a.acceleration
@@ -143,4 +143,4 @@ def save_animations_data(item_idx, animations, filename, options):
             saves[s] = 'UNKNOWN_STATE', animations_state
 
     with open(path + '\\' + filename + '.json', 'w') as f:
-        json.dump(saves, f)
+        json.dump(saves, f, indent=4)

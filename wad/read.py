@@ -353,10 +353,9 @@ def readWAD(f, options):
                     try:
                         command_it = next(i for i, c in enumerate(commands_data) if c[0] == 2 * cur_anim.commands_offset)
                         for idx in range(cur_anim.num_commands):
-                            if command_it + idx < len(commands):
+                            if command_it + idx < len(commands_data):
                                 e = tuple(commands_data[command_it + idx][1])
                                 commands.append(e)
-
                     except StopIteration:
                         print("Invalid command")
 
