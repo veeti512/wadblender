@@ -18,7 +18,7 @@ movables2discard = {'LARA', 'PISTOLS_ANIM', 'UZI_ANIM', 'SHOTGUN_ANIM', 'CROSSBO
                     'LARA_START_POS', 'KILL_ALL_TRIGGERS', 'TRIGGER_TRIGGERER', 'DARTS', 'DART_EMITTER', 'HOMING_DART_EMITTER',
                     'FLAME', 'FLAME_EMITTER', 'FLAME_EMITTER2', 'FLAME_EMITTER3', 'ROPE',
                     'FIREROPE', 'SMOKE_EMITTER_WHITE', 'SMOKE_EMITTER_BLACK', 'STEAM_EMITTER', 'EARTHQUAKE', 'BUBBLES', 'WATERFALLMIST',
-                    'CAMERA_TARGET'}
+                    'CAMERA_TARGET', 'VEHICLE_EXTRA_MVB'}
 
 
 import xml.etree.ElementTree as ET

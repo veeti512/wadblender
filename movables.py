@@ -30,6 +30,8 @@ def main(context, materials, wad, options):
         idx = str(movable.idx)
         if idx in options.mov_names:
             name = options.mov_names[idx]
+            if name == 'VEHICLE_EXTRA':
+                name = 'VEHICLE_EXTRA_MVB'
         else:
             name = 'MOVABLE' + idx
 
