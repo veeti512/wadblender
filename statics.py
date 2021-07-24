@@ -9,9 +9,13 @@ def paint_vertex(obj):
 
     vcol_layer = mesh.vertex_colors.new(name='shade')
 
+
     for poly in mesh.polygons:
         for loop_index in poly.loop_indices:
             loop_vert_index = mesh.loops[loop_index].vertex_index
+            if loop_vert_index >= len(obj['shades']):
+                # static has dynamic lighting info
+                return
             shade = 1 - obj['shades'][loop_vert_index] / 255
             vcol_layer.data[loop_index].color = [1 - shade, ] * 3 + [1.0]
 
