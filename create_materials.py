@@ -121,13 +121,13 @@ def createPageMaterial(filepath, context):
     material_name = filepath[filepath.rindex(path.sep) + 1: filepath.rindex('.')]
     mat = generateNodesSetup(material_name, filepath)
         
-    set_idx = len(obj.material_slots)
-    bpy.ops.object.material_slot_add()
-    obj.active_material_index = set_idx
-    obj.material_slots[set_idx].material = mat
+    # set_idx = len(obj.material_slots)
+    # bpy.ops.object.material_slot_add()
+    # obj.active_material_index = set_idx
+    # obj.material_slots[set_idx].material = mat
     bpy.data.materials.update()
 
-    target_mat = obj.material_slots[obj.active_material_index].material
+    target_mat = mat # obj.material_slots[obj.active_material_index].material
     target_mat.name = material_name
 
     if sprytile_installed:
