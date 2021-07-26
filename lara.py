@@ -1,5 +1,6 @@
 import os
 import math
+from collections import defaultdict
 
 import bpy
 
@@ -38,6 +39,54 @@ def extract_pivot_points(meshnames, joints, scale):
     return pivot_points
 
 
+def join_skin(lara_skin_meshes, lara_skin_joints_meshes, vertexfile, d=0.005):
+    def find_overlapping_vertices(bone, joint):
+        bone = next(mesh for mesh in lara_skin_meshes if bone in mesh.name)
+        joint = next(mesh for mesh in lara_skin_joints_meshes if joint in mesh.name)
+
+        vertices = []
+        for vert in bone.data.vertices:
+            # find closest skin joint vertex
+            dist = float('inf')
+            idx = -1
+            for v in joint.data.vertices:
+                cur_dist = (joint.matrix_world @ v.co - bone.matrix_world @ vert.co).length
+                if cur_dist < dist:
+                    dist = cur_dist
+                    idx = v.index
+            
+            # if vertex is close enough, add it to vertex group
+            if dist < d :
+                vertices.append(idx)
+
+        joint.vertex_groups.new(name=bone.name + '_BONE')
+        joint.vertex_groups[bone.name + '_BONE'].add(vertices, 1.0, "ADD")
+        return vertices
+
+
+    vx = defaultdict(set)
+    for i, sjm in enumerate(lara_skin_joints_meshes):
+        for v in sjm.data.vertices:
+            vx[i].add(v.index)
+
+    with open(vertexfile, 'r') as f:
+        lines = f.readlines()
+
+    for line in lines:
+        # find non overlapping skin joint vertices (the ones that do not connect directly to adjacent meshes)
+        joint, bone = line.split()
+        idx = next(k for k, e in enumerate(lara_skin_joints_meshes) if joint in e.name)
+        vertices = find_overlapping_vertices(bone, joint)
+        for e in vertices:
+            vx[idx].discard(e)
+
+    # add them to all vertex groups (e.g. the vertices in the middle of the knee 
+    # are added to the vertex groups of both thigh and leg)
+    for k, v in vx.items():
+        joint = lara_skin_joints_meshes[k]
+        for vg in joint.vertex_groups:
+            vg.add(list(vx[k]), 1.0, "ADD")
+
 
 def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_meshes, bonesfile, vertexfile, scale):
     # create bones
@@ -75,17 +124,7 @@ def create_lara_skeleton(rig, pivot_points, lara_skin_meshes, lara_skin_joints_m
         modifier = mesh.modifiers.new(type='ARMATURE', name=rig.name)
         modifier.object = rig
 
-    with open(vertexfile, 'r') as f:
-        lines = f.readlines()
-
-    for i in range(0, len(lines), 2):
-        mesh_a, mesh_b = lines[i].split()
-        mesh_a = next(
-            mesh for mesh in lara_skin_joints_meshes if mesh_a in mesh.name)
-        mesh_b = next(mesh for mesh in lara_skin_meshes if mesh_b in mesh.name)
-        vertices = [int(c) for c in lines[i + 1].split()]
-        mesh_a.vertex_groups.new(name=mesh_b.name + '_BONE')
-        mesh_a.vertex_groups[mesh_b.name + '_BONE'].add(vertices, 1.0, "ADD")
+    join_skin(lara_skin_meshes, lara_skin_joints_meshes, vertexfile)
 
     for mesh in lara_skin_joints_meshes:
         mesh.parent = rig
@@ -231,7 +270,7 @@ def main(context, materials, wad, options):
 
         cur_script_path = os.path.dirname(os.path.realpath(__file__))
         bonesfile = cur_script_path + '\\resources\\bones.txt'
-        vertexfile = cur_script_path + '\\resources\\vertex_mapping.txt'
+        vertexfile = cur_script_path + '\\resources\\skin_links.txt'
         create_lara_skeleton(rig, pivot_points['LARA_SKIN'], movables['LARA_SKIN'],
                             movables['LARA_SKIN_JOINTS'], bonesfile, vertexfile, options.scale)
 
