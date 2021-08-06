@@ -226,10 +226,11 @@ def main(context, materials, wad, options):
                 mesh_obj = bpy.data.objects.new(mesh_name, mesh_data)
                 col.objects.link(mesh_obj)
 
+                    
                 if not options.one_material_per_object:
                     apply_textures(context, m, mesh_obj, materials, options)
                     if options.flip_normals:
-                        mesh_data.flip_normals()
+                        mesh_obj.data.flip_normals()
                 else:
                     meshes2.append(m)
                     lara_objs.append(mesh_obj)
@@ -248,7 +249,8 @@ def main(context, materials, wad, options):
 
         if options.one_material_per_object:
             pack_textures(context, meshes2, lara_objs, options, anim)
-            for obj in mesh_objects:
+
+            for obj in lara_objs:
                 if options.flip_normals:
                     obj.data.flip_normals()
 
