@@ -6,7 +6,7 @@ from bpy.types import Operator
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty, IntProperty
 
-from . import lara, movables, statics, objects
+from . import lara, movables, statics, objects, lara_rigless
 from .wad import read, preview
 from .create_materials import generateNodesSetup, createPageMaterial
 
@@ -79,6 +79,7 @@ class ImportWAD(Operator, ImportHelper):
         description="",
         items=(
             ('OPT_LARA', "Lara Full Model", "Import all Lara objects"),
+            ('OPT_OUTFIT', "Lara's Outfit", "Import only LARA_SKIN and LARA_SKIN_JOINTS meshes"),
             ('OPT_MOVABLES', "All Movables", "Import all Movable objects"),
             ('OPT_STATICS', "All Statics", "Import all Static objects"),
             ('OPT_EVERYTHING', "Everything", "Import Everything"),
@@ -341,6 +342,8 @@ class ImportWAD(Operator, ImportHelper):
                 'TR1', 'TR2', 'TR3'} else self.batch_import
             if t == 'OPT_LARA':
                 lara.main(context, materials, wad, options)
+            elif t == 'OPT_OUTFIT':
+                lara_rigless.main(context, materials, wad, options)
             elif t == 'OPT_MOVABLES':
                 movables.main(context, materials, wad, options)
             elif t == 'OPT_STATICS':
