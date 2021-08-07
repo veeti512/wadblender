@@ -48,6 +48,7 @@ class ImportWADContext:
         rename_dups(mov_names[game])
         rename_dups(static_names[game])
 
+
     game = 'TR4'
 
     @classmethod
@@ -192,6 +193,21 @@ class ImportWAD(Operator, ImportHelper):
         default='TR4',
     )
 
+    anims_names_opt: EnumProperty(
+        name="Animation names",
+        description="",
+        items=[
+            ('OPT_SAMEASOBJECTS', "Same as SLOT names", ""),
+            ('TR1', "TR1", ""),
+            ('TR2', "TR2", ""),
+            ('TR3', "TR3", ""),
+            ('TR4', "TR4", ""),
+            ('TR5', "TR5", ""),
+            ('TR5Main', "TR5Main", ""),
+        ][::-1],
+        default='OPT_SAMEASOBJECTS',
+    )
+
     def draw(self, context):
         layout = self.layout
         row = layout.row()
@@ -252,6 +268,8 @@ class ImportWAD(Operator, ImportHelper):
         box = layout.box()
         box.label(text="Advanced", icon="SETTINGS")
         box.prop(self, "flip_normals")
+        box.label(text="Animation names")
+        box.prop(self, "anims_names_opt", text="")
 
     def execute(self, context):
 
@@ -275,8 +293,11 @@ class ImportWAD(Operator, ImportHelper):
 
         options.mov_names = ImportWADContext.mov_names[ImportWADContext.game]
         options.static_names = ImportWADContext.static_names[ImportWADContext.game]
-        options.anim_names = ImportWADContext.anim_names[ImportWADContext.game]
         options.state_names = ImportWADContext.state_names[ImportWADContext.game]
+        if self.anims_names_opt == 'OPT_SAMEASOBJECTS':
+            options.anim_names = ImportWADContext.anim_names[ImportWADContext.game]
+        else:
+            options.anim_names = ImportWADContext.anim_names[self.anims_names_opt]
 
         if ImportWADContext.has_numpy:
             options.one_material_per_object = self.texture_type == 'OPT_OBJECT'

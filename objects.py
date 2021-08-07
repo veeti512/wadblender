@@ -70,9 +70,9 @@ def get_partial_names(version):
 def get_names(ver):
     movables, statics, animations, states = get_partial_names(ver)
 
-    for g in reversed(['TR1', 'TR2', 'TR3', 'TR4', 'TR5', 'TR5Main']):
+    for g in ['TR1', 'TR2', 'TR3', 'TR4', 'TR5', 'TR5Main']:
         if g == ver:
-            continue
+            break
 
         _, _, animations2, states2 = get_partial_names(g)
 

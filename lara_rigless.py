@@ -249,4 +249,9 @@ def main(context, materials, wad, options):
         for obj in col.objects:
             obj.select_set(True)
         bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
-        
+        mtl_path = filepath[:-3] + 'mtl'
+        line1 = 'map_Ka {}.png\n'.format(anim)
+        line2 = 'map_Kd {}.png'.format(anim)
+        with open(mtl_path, 'a') as f:
+            f.write(line1)
+            f.write(line2)
