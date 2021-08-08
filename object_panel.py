@@ -1,8 +1,45 @@
+import os
 import bpy
 from bpy_extras.io_utils import ImportHelper, ExportHelper
-from bpy.props import StringProperty
+from bpy.props import BoolProperty, IntProperty, StringProperty, EnumProperty, FloatVectorProperty
+from mathutils import Vector
+from bpy_extras.io_utils import ExportHelper
+from .wad import write
+from .import_wad import ImportWAD, ImportWADContext
+from .wad import write_obj
 
 from .create_materials import generateNodesSetup
+
+
+def item_cb(self, context):
+    """Populates popup search box"""
+    movable_names, static_names = ImportWADContext.mov_names['TR4'], ImportWADContext.static_names['TR4']
+
+    if ImportWAD.SlotType == 'movable':
+        return [(o, '{} - {}'.format(o, v), "") for o,v in movable_names.items()]
+    else:
+        return [(o, '{} - {}'.format(o, v), "") for o,v in static_names.items()]
+
+
+class PopUpSearch2(bpy.types.Operator):
+    """Tooltip"""
+    bl_idname = "wadblender.popup_search2"
+    bl_label = "Select Slot"
+    bl_property = "objs_enum"
+
+    objs_enum: bpy.props.EnumProperty(items=item_cb)
+
+    def execute(self, context):
+        context.scene.SelectedObject = self.objs_enum
+        context.area.tag_redraw()
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        wm.invoke_search_popup(self)
+        return {'FINISHED'}
+
+
 
 class WadBlenderAddShineVertexLayer(bpy.types.Operator):
     bl_idname = "wadblender.shine_load"
@@ -124,12 +161,144 @@ class WadBlenderAddExistingMaterial(bpy.types.Operator, ImportHelper):
         return {'FINISHED'}
 
 
+class WadBlenderSaveAsStatic(bpy.types.Operator, ExportHelper):
+    bl_idname = "wadblender.save_static"
+    bl_label = "Save as Static"
+    bl_description = "Save the selected object in a static slot"
+
+    filename_ext = ".wad"
+
+    filter_glob: StringProperty(
+        default="*.wad",
+        options={'HIDDEN'},
+        maxlen=255,
+    )
+
+    scale_setting: IntProperty(
+        name="Scale",
+        description="Dividing by 512, one TRLE click becomes 0.5 meters",
+        default=512,
+        min=1,
+        max=100000
+    )
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.label(text='WAD Blender', icon="BLENDER")
+        obj = context.active_object
+
+        ImportWAD.SlotType = 'static'
+        box = layout.box()
+        row = box.row()
+        row.operator("wadblender.popup_search2")
+        row.label(text=ImportWADContext.static_names['TR4'][str(context.scene.SelectedObject)])
+        row = box.row()
+        row.prop(self, "scale_setting")
+
+    def execute(self, context):
+        name = ImportWADContext.static_names['TR4'][context.scene.SelectedObject]
+        exit_code, log = write.writeWAD(context.object, int(context.scene.SelectedObject), self.filepath, name, True, self.scale_setting)
+        ImportWADContext.log = log
+        return exit_code
+
+
+class WadBlenderSaveAsMovable(bpy.types.Operator, ExportHelper):
+    bl_idname = "wadblender.save_movable"
+    bl_label = "Save as Movable"
+    bl_description = "Save the selected object in a movable slot"
+
+    filename_ext = ".wad"
+
+    filter_glob: StringProperty(
+        default="*.wad",
+        options={'HIDDEN'},
+        maxlen=255,
+    )
+
+
+    scale_setting: IntProperty(
+        name="Scale",
+        description="Dividing by 512, one TRLE click becomes 0.5 meters",
+        default=512,
+        min=1,
+        max=100000
+    )
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.label(text='WAD Blender', icon="BLENDER")
+        obj = context.active_object
+        ImportWAD.SlotType = 'movable'
+        box = layout.box()
+        row = box.row()
+        row.operator("wadblender.popup_search2")
+        row.label(text=ImportWADContext.mov_names['TR4'][str(context.scene.SelectedObject)])
+        row = box.row()
+        row.prop(self, "scale_setting")
+
+
+    def execute(self, context):
+        ImportWADContext.log.clear()
+        name = ImportWADContext.mov_names['TR4'][context.scene.SelectedObject]
+        exit_code, log = write.writeWAD(context.object, int(context.scene.SelectedObject), self.filepath, name, False, self.scale_setting)
+        ImportWADContext.log = log
+        return exit_code
+
+
+class WadBlenderSaveAsObj(bpy.types.Operator, ExportHelper):
+    bl_idname = "wadblender.save_obj"
+    bl_label = "Save as Obj"
+    bl_description = "Export option for making Shine and Opacity attributes compatible with Tomb Editor"
+
+    filename_ext = ".obj"
+
+    filter_glob: StringProperty(
+        default="*.obj",
+        options={'HIDDEN'},
+        maxlen=255,
+    )
+
+    scale_setting: IntProperty(
+        name="Scale",
+        description="Dividing by 512, one TRLE click becomes 0.5 meters",
+        default=512,
+        min=1,
+        max=100000
+    )
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.label(text='WAD Blender', icon="BLENDER")
+        obj = context.active_object
+        row = layout.row()
+        row.prop(self, "scale_setting")
+
+    def execute(self, context):
+        exit_code, log = write_obj.write_obj(context.object, self.filepath, context, self.scale_setting)
+        ImportWADContext.log = log
+        return exit_code
+
+
+class WadBlenderClearLog(bpy.types.Operator):
+    bl_idname = "wadblender.clear_log"
+    bl_label = "Clear log"
+    bl_description = ""
+
+    def execute(self, context):
+        ImportWADContext.log.clear()
+        return {'FINISHED'}
+
+
 class ObjectPanel(bpy.types.Panel):
     bl_label = "Wad Blender"
     bl_idname = "WADBLENDER_PT_ObjectPanel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Wad Blender'
+    
 
     @classmethod
     def poll(cls, context):
@@ -142,11 +311,18 @@ class ObjectPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        obj = context.active_object
+        selection = bpy.context.selected_objects
 
-        if obj is None:
-            layout.label(text="Nothing selected", icon = 'INFO')
+
+
+        if len(selection) < 1:
+            layout.label(text="Select an object", icon = 'INFO')
             return
+        elif len(selection) > 1:
+            layout.label(text="Select a single mesh", icon = 'INFO')
+            return
+
+        obj = selection[0]
 
         row = layout.row(align=True)
         row.operator('wadblender.add_material', icon='FILE_NEW')
@@ -173,6 +349,64 @@ class ObjectPanel(bpy.types.Panel):
                 col.operator('wadblender.opacity_load', text='Opacity', icon='MOD_OPACITY')
 
 
+        box = layout.box()
+        row = box.row(align=True)
+        row.label(text='Save as:')
+        row = box.row(align=True)
+        row.operator('wadblender.save_static', text='Static')
+        #row.operator('wadblender.save_movable', text='Movable')
+        #row.operator('wadblender.save_obj', text='Obj')
+
+
+class LogPanel(bpy.types.Panel):
+    bl_label = "Log"
+    bl_idname = "WADBLENDER_PT_LogPanel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Wad Blender'
+    
+
+    @classmethod
+    def poll(cls, context):
+        return len(ImportWADContext.log) > 0
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column()
+        for line in ImportWADContext.log:
+            if line.startswith('W'):
+                col = layout.column()
+                col.alert = True
+                col.label(text=line[1:])
+                col.alert = False
+            else:
+                col.label(text=line)
+
+        col.operator('wadblender.clear_log')
+
+
+
+def returnCubeMesh(passed_name, vertices):
+    v = []
+    e = []
+
+    for vertex in vertices:
+        v.append(Vector(vertex))     
+                  
+    # Default cube face order.
+    faces = [[4,5,1,0],
+             [5,6,2,1],
+             [6,7,3,2],
+             [7,4,0,3],
+             [0,1,2,3],
+             [7,6,5,4],
+            ]
+            
+    me = bpy.data.meshes.new(passed_name)
+    me.from_pydata(v, e, faces)
+    me.validate(verbose = True)  # useful for development when the mesh may be invalid.
+    return me
+
 def register():
     bpy.utils.register_class(ObjectPanel)
     bpy.utils.register_class(WadBlenderAddShineVertexLayer)
@@ -180,6 +414,16 @@ def register():
     bpy.utils.register_class(WadBlenderAddShadeVertexLayer)
     bpy.utils.register_class(WadBlenderAddMaterial)
     bpy.utils.register_class(WadBlenderAddExistingMaterial)
+    bpy.utils.register_class(WadBlenderSaveAsStatic)
+    bpy.utils.register_class(WadBlenderSaveAsMovable)
+    bpy.utils.register_class(WadBlenderSaveAsObj)
+    bpy.utils.register_class(PopUpSearch2)
+    bpy.utils.register_class(WadBlenderClearLog)
+    bpy.utils.register_class(LogPanel)
+
+    bpy.types.Scene.SelectedObject = StringProperty(default='0')
+
+    bpy.types.Scene.SlotType = StringProperty()
 
 
 def unregister():
@@ -189,6 +433,12 @@ def unregister():
     bpy.utils.unregister_class(WadBlenderAddShadeVertexLayer)
     bpy.utils.unregister_class(WadBlenderAddMaterial)
     bpy.utils.unregister_class(WadBlenderAddExistingMaterial)
+    bpy.utils.unregister_class(WadBlenderSaveAsStatic)
+    bpy.utils.unregister_class(WadBlenderSaveAsMovable)
+    bpy.utils.unregister_class(WadBlenderSaveAsObj)
+    bpy.utils.unregister_class(PopUpSearch2)
+    bpy.utils.unregister_class(WadBlenderClearLog)
+    bpy.utils.unregister_class(LogPanel)
 
 
 if __name__ == "__main__":

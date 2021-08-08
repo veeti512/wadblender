@@ -33,6 +33,7 @@ def rename_dups(obj_names):
 class ImportWADContext:
     update_single_obj_chkbox = False
     selected_obj = 'None'
+    log = []
 
     last_selected_file = ''
     last_objects_list = []

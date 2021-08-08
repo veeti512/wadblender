@@ -128,3 +128,54 @@ def pack_object_textures(meshes, texture_path):
         uvtable[(x0, y0, w, h)] = (x, y)
 
     return uvtable, new_texture_map
+
+def pack_object_textures2(meshes, texture_path):
+    # load wad texture map
+    import numpy as np
+    from PIL import Image
+    image = Image.open(texture_path)
+    wad_texture_map = np.asarray(image)
+    map_height = wad_texture_map.shape[0]
+
+    # get distinct texture samples
+    texture_rects = set()
+    for mesh in meshes:
+        texture_rects |= {(poly.x, poly.y, poly.tex_width, poly.tex_height) 
+                           for poly in mesh.polygons}
+
+    # sort by area
+    texture_rects = sorted(texture_rects, key=lambda x: x[2] * x[3], reverse=True)
+
+    cur_pos = [(e[0], e[1]) for e in texture_rects]  # top left corner
+    tex_sizes = [(e[2], e[3]) for e in texture_rects]  # width and height
+
+    # binary search to find smallest height (width is fixed to 256)
+    lo, hi = 0, map_height + 1
+    new_pos = None
+    while lo < hi:
+        mid = (lo + hi) // 2
+        cur = pack(tex_sizes, max_height=mid)
+        if cur:
+            new_pos, new_map_width, new_map_height = cur
+            hi = mid
+        else:
+            lo = mid + 1
+    
+    # build new texture map
+    new_texture_map = np.zeros((new_map_height, new_map_width, 4), dtype='uint8')
+    new_texture_map[:,:, 3] = 1  # alpha channel
+    for i in range(len(tex_sizes)):
+        w, h = tex_sizes[i]
+        x0, y0 = cur_pos[i]
+        x, y = new_pos[i]
+        new_texture_map[y:y+h, x:x+w, :] = wad_texture_map[y0:y0+h, x0:x0+w, :]
+
+    # conversion table from old to new uvs
+    uvtable = {}
+    for i in range(len(tex_sizes)):
+        w, h = tex_sizes[i]
+        x0, y0 = cur_pos[i]
+        x, y = new_pos[i]
+        uvtable[(x0, y0, w, h)] = (x, y)
+
+    return uvtable, new_texture_map

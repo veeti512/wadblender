@@ -282,7 +282,10 @@ def main(context, materials, wad, options):
         bpy.ops.object.mode_set(mode="OBJECT")
         rig.rotation_euler[1] = math.pi
         rig.rotation_euler[0] = math.pi/2
+        bpy.context.view_layer.objects.active = rig
+        rig.select_set(True)
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        rig.select_set(False)
 
         if options.export_fbx:
             filepath = options.path + '\\{}.fbx'.format(anim)

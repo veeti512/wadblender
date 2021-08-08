@@ -139,12 +139,12 @@ def createPageMaterial(filepath, context):
 
 def pack_textures(context, meshes, objects, options, name):
     from PIL import Image
-    from .texture_packer import pack_object_textures
+    from .texture_packer import pack_object_textures2
 
     sprytile_installed = sprytile.check_install()
 
     texture_path = options.path + options.wadname + ".png"
-    uvtable, new_texture_map = pack_object_textures(meshes, texture_path)
+    uvtable, new_texture_map = pack_object_textures2(meshes, texture_path)
 
     im = Image.fromarray(new_texture_map)
     if name == '':

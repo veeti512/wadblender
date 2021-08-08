@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import struct
 from typing import List
 from math import pi
@@ -17,6 +17,18 @@ def read_uint16(f):
 
 def read_int16(f):
     return struct.unpack('h', f.read(2))[0]
+
+
+def pack_uint32(val):
+    return struct.pack('I', val)
+
+
+def pack_int16(val):
+    return struct.pack('h', val)
+
+
+def pack_uint16(val):
+    return struct.pack('H', val)
 
 def split(test_image):
     import numpy as np
@@ -45,13 +57,11 @@ def read_texture_map(f, texture_byte_size, map_width, map_height):
     if HAS_NUMPY:
         im = np.frombuffer(raw_data, dtype='uint8')
         im = np.reshape(im, (map_height, map_width, 3))
-        data = np.dstack(
-            (im, np.zeros((map_height, map_width), dtype=np.uint8)+255))
+        data = np.dstack((im, np.zeros((map_height, map_width), dtype=np.uint8)+255))
         r1, g1, b1 = 255, 0, 255  # Original value
         r2, g2, b2, a2 = 0, 0, 0, 0  # Value that we want to replace it with
 
-        red, green, blue, alpha = data[:, :, 0], data[:,
-                                                      :, 1], data[:, :, 2], data[:, :, 3]
+        red, green, blue, alpha = data[:, :, 0], data[:, :, 1], data[:, :, 2], data[:, :, 3]
         mask = (red == r1) & (green == g1) & (blue == b1)
         data[:, :, :4][mask] = [r2, g2, b2, a2]
 
@@ -104,8 +114,7 @@ def read_splitted_texture_map(raw_data, texture_byte_size, map_width, map_height
     r1, g1, b1 = 255, 0, 255  # Original value
     r2, g2, b2, a2 = 0, 0, 0, 0  # Value that we want to replace it with
 
-    red, green, blue, alpha = data[:, :, 0], data[:,
-                                                    :, 1], data[:, :, 2], data[:, :, 3]
+    red, green, blue, alpha = data[:, :, 0], data[:, :, 1], data[:, :, 2], data[:, :, 3]
     mask = (red == r1) & (green == g1) & (blue == b1)
     data[:, :, :4][mask] = [r2, g2, b2, a2]
 
@@ -124,7 +133,18 @@ class DecoderInterface:
 
 
 @dataclass
-class TextureSamples(DecoderInterface):
+class EncoderInterface:
+    size: int
+    format: str
+
+    def encode(self):
+        values = list(asdict(self).values())[2:]
+        return struct.pack(self.format, *values)
+
+
+
+@dataclass
+class TextureSamples(DecoderInterface, EncoderInterface):
     x: int  # anchor corner x pixel position
     y: int  # anchor corner y pixel position
     page: int  # page where the texture sample is stored
@@ -146,8 +166,16 @@ class TextureSamples(DecoderInterface):
         self.height = self.addH + 1
 
 
+# t = TextureSamples(8, '2B H b B b B', 1,2,3,0,5,0,7)
+# print(t)
+# values = [f.name for f in fields(TextureSamples)]
+# print(list(asdict(t).values())[2:])
+# res = t.encode(None)
+# print(res)
+
+
 @dataclass
-class BoundingSphere(DecoderInterface):
+class BoundingSphere(DecoderInterface, EncoderInterface):
     cx: int  # centre’s coordinate in x
     cy: int  # centre’s coordinate in y
     cz: int  # centre’s coordinate in z
@@ -172,12 +200,14 @@ class Polygon():
     @staticmethod
     def decode(f):
         shape = read_uint16(f)
+        assert shape == 8 or shape == 9
         if shape == 8:
             vertices = struct.unpack('3H', f.read(6))
         else:
             vertices = struct.unpack('4H', f.read(8))
 
         texture = read_uint16(f)
+
         attributes = struct.unpack('B', f.read(1))[0]
         f.read(1)  # unknown
 
@@ -191,7 +221,8 @@ class Polygon():
             texture_index = texture
             if texture_flipped:
                 texture_index = 0X10000 - texture_index
-
+        
+        #print(texture_index)
         intensity = (attributes & 0X7C) >> 2
         shine = (attributes & 0X02) >> 1
         opacity = attributes & 0X01
@@ -199,9 +230,12 @@ class Polygon():
         return Polygon(shape, vertices, texture_flipped, texture_shape,
                        texture_index, intensity, shine, opacity)
 
+    def encode(self):
+        pass
+
 
 @dataclass
-class ShortVector3D(DecoderInterface):
+class ShortVector3D(DecoderInterface, EncoderInterface):
     vx: int
     vy: int
     vz: int
@@ -311,7 +345,7 @@ class Keyframes:
 
 
 @dataclass
-class Movable(DecoderInterface):
+class Movable(DecoderInterface, EncoderInterface):
     obj_ID: int  # unique ID number for this Movable
     num_pointers: int  # number of mesh pointers
     pointers_index: int  # index in the pointers list
@@ -324,7 +358,7 @@ class Movable(DecoderInterface):
 
 
 @dataclass
-class Static(DecoderInterface):
+class Static(DecoderInterface, EncoderInterface):
     obj_ID: int  # unique ID number for this Static.
     pointers_index: int  # index of a pointer to the mesh.
     vx1: int  # coordinate, visibility bounding box
