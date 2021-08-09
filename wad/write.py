@@ -144,8 +144,8 @@ def writeWAD(obj_orig, obj_id, filepath, name, is_static=False, scale=512):
 
     bmesh.ops.delete( bm, geom = faces2remove, context = 'FACES_ONLY' )
 
-    bm.to_mesh(obj.data)
-    bm.from_mesh(obj.data)
+    # bm.to_mesh(obj.data)
+    # bm.from_mesh(obj.data)
     poly_count = len(bm.faces)
 
     for face in bm.faces:
@@ -261,7 +261,6 @@ def writeWAD(obj_orig, obj_id, filepath, name, is_static=False, scale=512):
         vec = ShortVector3D(ShortVector3D.size, ShortVector3D.format, x, y, z)
         vertices.append(vec)
 
-
     vertices_cnt = len(vertices)
     log.append('{} vertices.'.format(vertices_cnt))
     shades = []
@@ -273,15 +272,18 @@ def writeWAD(obj_orig, obj_id, filepath, name, is_static=False, scale=512):
             for loop in face.loops:
                 shades[loop.vert.index] = 8191 - floor(loop[shade_layer][0] * 8191)
     else:
+        normals = [0] * vertices_cnt
         shine_layer = verify_vcol_layer(bm, 'shine', 0)
         opacity_layer = verify_vcol_layer(bm, 'opacity', 0)
+        for face in bm.faces:
+            for loop in face.loops:
+                x, y, z = (floor(16300*co) for co in loop.vert.normal)
+                vec = ShortVector3D(ShortVector3D.size, ShortVector3D.format, x, y, z)
+                normals[loop.vert.index] = vec
 
-        bnormals = [vertex.normal for vertex in obj.data.vertices]
-        normals = []
-        for norm in bnormals:
-            x, y, z = (floor(16300*co) for co in norm)
-            vec = ShortVector3D(ShortVector3D.size, ShortVector3D.format, x, y, z)
-            normals.append(vec)
+
+        # bnormals = [vertex.normal for vertex in obj.data.vertices]
+        # for norm in bnormals:
 
         face_shine = {}
         is_face_translucent = {}
@@ -336,10 +338,13 @@ def writeWAD(obj_orig, obj_id, filepath, name, is_static=False, scale=512):
 
     if is_static:
         output.append(pack_int16(-vertices_cnt))
+        assert vertices_cnt == len(shades)
         output += [pack_int16(s) for s in shades]
     else:
         output.append(pack_int16(vertices_cnt))
         output += [normal.encode() for normal in normals]
+        assert vertices_cnt == len(normals)
+
 
     output.append(pack_uint16(poly_count))
     for face in bm.faces:
