@@ -57,10 +57,7 @@ def writeWAD(obj_orig, obj_id, filepath, name, is_static=False, scale=512):
     obj.rotation_euler[1] = pi
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
-<<<<<<< Updated upstream
-=======
     bpy.ops.object.parent_clear(type='CLEAR')
->>>>>>> Stashed changes
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     obj.select_set(False)
     

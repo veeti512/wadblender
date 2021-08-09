@@ -75,14 +75,10 @@ def write_obj(obj_orig, filepath, context, scale):
     texture.file_format = 'PNG'
     texture.save()
 
-<<<<<<< Updated upstream
-    obj.data.materials += createShineOpacityMaterials(obj.name, texture.filepath_raw)
-=======
     mats = createShineOpacityMaterials(obj.name, texture.filepath_raw)
 
     for m in mats:
         obj.data.materials.append(m)
->>>>>>> Stashed changes
 
     shine_layer = verify_vcol_layer(bm, 'shine', 0)
     opacity_layer = verify_vcol_layer(bm, 'opacity', 1)
@@ -108,14 +104,11 @@ def write_obj(obj_orig, filepath, context, scale):
     bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True, global_scale=scale, keep_vertex_order=True)
     bpy.data.objects.remove(obj, do_unlink=True)
     log.append("File written successfully.")
-<<<<<<< Updated upstream
-=======
     # mtl_path = filepath[:-3] + 'mtl'
     # line1 = 'map_Ka {}.png\n'.format(texture.filepath_raw)
     # line2 = 'map_Kd {}.png'.format(texture.filepath_raw)
     # with open(mtl_path, 'a') as f:
     #     f.write(line1)
     #     f.write(line2)
->>>>>>> Stashed changes
 
     return {'FINISHED'}, log
