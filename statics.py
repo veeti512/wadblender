@@ -77,5 +77,12 @@ def main(context, materials, wad, options):
             bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z',
                                      use_selection=True)
 
+            mtl_path = filepath[:-3] + 'mtl'
+            line1 = 'map_Ka {}.png\n'.format(name)
+            line2 = 'map_Kd {}.png'.format(name)
+            with open(mtl_path, 'a') as f:
+                f.write(line1)
+                f.write(line2)
+
         if not options.single_object:
             obj.hide_set(True)

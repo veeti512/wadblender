@@ -197,6 +197,12 @@ def main(context, materials, wad, options):
             for obj in collection.objects:
                 obj.select_set(True)
             bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z', use_selection=True)
+            mtl_path = filepath[:-3] + 'mtl'
+            line1 = 'map_Ka {}.png\n'.format(name)
+            line2 = 'map_Kd {}.png'.format(name)
+            with open(mtl_path, 'a') as f:
+                f.write(line1)
+                f.write(line2)
             
         if not options.single_object:
             bpy.context.view_layer.layer_collection.children['Collection'].children['Movables'].children[name].hide_viewport = True

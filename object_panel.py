@@ -354,8 +354,13 @@ class ObjectPanel(bpy.types.Panel):
         row.label(text='Save as:')
         row = box.row(align=True)
         row.operator('wadblender.save_static', text='Static')
+<<<<<<< Updated upstream
         #row.operator('wadblender.save_movable', text='Movable')
         #row.operator('wadblender.save_obj', text='Obj')
+=======
+        # row.operator('wadblender.save_movable', text='Movable')
+        row.operator('wadblender.save_obj', text='Obj')
+>>>>>>> Stashed changes
 
 
 class LogPanel(bpy.types.Panel):
