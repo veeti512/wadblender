@@ -7,6 +7,7 @@ from bpy_extras.io_utils import ExportHelper
 from .wad import write
 from .import_wad import ImportWAD, ImportWADContext
 from .wad import write_obj
+from .bake import bake
 
 from .create_materials import generateNodesSetup
 
@@ -282,6 +283,20 @@ class WadBlenderSaveAsObj(bpy.types.Operator, ExportHelper):
         return exit_code
 
 
+
+class WadBlenderBake(bpy.types.Operator):
+    bl_idname = "wadblender.bake"
+    bl_label = "Bake into lightmap"
+    bl_description = "lightmap packing of object textures"
+
+
+    def execute(self, context):
+        bake(context.object)
+        return {'FINISHED'}
+
+
+
+
 class WadBlenderClearLog(bpy.types.Operator):
     bl_idname = "wadblender.clear_log"
     bl_label = "Clear log"
@@ -356,6 +371,8 @@ class ObjectPanel(bpy.types.Panel):
         row.operator('wadblender.save_static', text='Static')
         row.operator('wadblender.save_movable', text='Movable')
         row.operator('wadblender.save_obj', text='Obj')
+        row = box.row(align=True)
+        row.operator('wadblender.bake', text='Bake Lightmap')
 
 
 class LogPanel(bpy.types.Panel):
@@ -420,6 +437,7 @@ def register():
     bpy.utils.register_class(PopUpSearch2)
     bpy.utils.register_class(WadBlenderClearLog)
     bpy.utils.register_class(LogPanel)
+    bpy.utils.register_class(WadBlenderBake)
 
     bpy.types.Scene.SelectedObject = StringProperty(default='0')
 
@@ -439,6 +457,7 @@ def unregister():
     bpy.utils.unregister_class(PopUpSearch2)
     bpy.utils.unregister_class(WadBlenderClearLog)
     bpy.utils.unregister_class(LogPanel)
+    bpy.utils.unregister_class(WadBlenderBake)
 
 
 if __name__ == "__main__":
