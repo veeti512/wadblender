@@ -26,7 +26,7 @@ import xml.etree.ElementTree as ET
 
 def get_partial_names(version):
     cur_script_path = os.path.dirname(os.path.realpath(__file__))
-    filename = cur_script_path + '\\resources\\trcatalog.xml'
+    filename = os.path.join(cur_script_path, 'resources', 'trcatalog.xml')
     tree = ET.parse(filename)
     root = tree.getroot()
 

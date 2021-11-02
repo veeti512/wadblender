@@ -290,7 +290,7 @@ class ImportWAD(Operator, ImportHelper):
         options.object = ImportWADContext.selected_obj
         options.flip_normals = self.flip_normals
         options.path, _ = os.path.split(options.filepath)
-        options.path += '\\'
+        options.path += os.path.sep
 
         options.mov_names = ImportWADContext.mov_names[ImportWADContext.game]
         options.static_names = ImportWADContext.static_names[ImportWADContext.game]

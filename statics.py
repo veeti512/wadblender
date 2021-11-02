@@ -1,5 +1,6 @@
 import bpy
 import math
+import os
 
 from .create_materials import apply_textures, pack_textures
 
@@ -65,7 +66,7 @@ def main(context, materials, wad, options):
         if options.export_fbx:
             bpy.ops.object.select_all(action='DESELECT')
             bpy.context.object.select_set(True)
-            filepath = options.path + '\\{}.fbx'.format(name)
+            filepath = os.path.join(options.path, '{}.fbx'.format(name))
             bpy.ops.export_scene.fbx(filepath=filepath, axis_forward='Z',
                                      use_selection=True, add_leaf_bones=False,
                                      bake_anim_use_all_actions=False)
@@ -73,7 +74,7 @@ def main(context, materials, wad, options):
         if options.export_obj:
             bpy.ops.object.select_all(action='DESELECT')
             bpy.context.object.select_set(True)
-            filepath = options.path + '\\{}.obj'.format(name)
+            filepath = os.path.join(options.path, '{}.obj'.format(name))
             bpy.ops.export_scene.obj(filepath=filepath, axis_forward='Z',
                                      use_selection=True)
 
