@@ -243,7 +243,7 @@ def main(context, materials, wad, options):
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
     if options.export_obj:
-        filepath = options.path + '\\{}.obj'.format(anim)
+        filepath = os.path.join(options.path, '{}.obj'.format(anim))
 
         bpy.ops.object.select_all(action='DESELECT')
         for obj in col.objects:

@@ -1,4 +1,5 @@
 import math
+import os
 
 import bpy
 
@@ -177,7 +178,7 @@ def main(context, materials, wad, options):
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         if options.export_fbx:
-            filepath = options.path + '\\{}.fbx'.format(name)
+            filepath = os.path.join(options.path, '{}.fbx'.format(name))
             bpy.ops.object.select_all(action='DESELECT')
 
             bpy.context.view_layer.objects.active = rig
@@ -187,7 +188,7 @@ def main(context, materials, wad, options):
 
 
         if options.export_obj:
-            filepath = options.path + '\\{}.obj'.format(name)
+            filepath = os.path.join(options.path, '{}.obj'.format(name))
             bpy.ops.object.select_all(action='DESELECT')
 
             bpy.context.view_layer.objects.active = rig

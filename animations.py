@@ -1,4 +1,5 @@
 import json
+import os
 from typing import List, Tuple, Dict
 from collections import defaultdict
 
@@ -60,7 +61,7 @@ def create_animations(item_idx, rig, bonenames, animations, options):
         bpy.ops.object.select_all(action='DESELECT')
         rig.select_set(True)
         bpy.context.view_layer.objects.active = rig
-        filepath = options.path + '\\{}.fbx'.format(rig.name)
+        filepath = os.path.join(options.path, '{}.fbx'.format(rig.name))
         bpy.ops.export_scene.fbx(
             filepath=filepath, axis_forward='Z', use_selection=True,
             add_leaf_bones=False, bake_anim_use_all_actions=False, 
@@ -142,5 +143,5 @@ def save_animations_data(item_idx, animations, filename, options):
         else:
             saves[s] = 'UNKNOWN_STATE', animations_state
 
-    with open(path + '\\' + filename + '.json', 'w') as f:
+    with open(os.path.join(path, filename + '.json'), 'w') as f:
         json.dump(saves, f, indent=4)

@@ -271,8 +271,8 @@ def main(context, materials, wad, options):
         bpy.context.view_layer.objects.active = rig
 
         cur_script_path = os.path.dirname(os.path.realpath(__file__))
-        bonesfile = cur_script_path + '\\resources\\bones.txt'
-        vertexfile = cur_script_path + '\\resources\\skin_links.txt'
+        bonesfile = os.path.join(cur_script_path, 'resources', 'bones.txt')
+        vertexfile = os.path.join(cur_script_path, 'resources', 'skin_links.txt')
         create_lara_skeleton(rig, pivot_points['LARA_SKIN'], movables['LARA_SKIN'],
                             movables['LARA_SKIN_JOINTS'], bonesfile, vertexfile, options.scale)
 
@@ -285,7 +285,7 @@ def main(context, materials, wad, options):
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         if options.export_fbx:
-            filepath = options.path + '\\{}.fbx'.format(anim)
+            filepath = os.path.join(options.path, '{}.fbx'.format(anim))
             bpy.ops.object.select_all(action='DESELECT')
 
             bpy.context.view_layer.objects.active = rig
@@ -294,7 +294,7 @@ def main(context, materials, wad, options):
             bpy.ops.export_scene.fbx(filepath=filepath, axis_forward='Z', use_selection=True, add_leaf_bones=False, bake_anim_use_all_actions =False)
 
         if options.export_obj:
-            filepath = options.path + '\\{}.obj'.format(anim)
+            filepath = os.path.join(options.path, '{}.obj'.format(anim))
 
             bpy.ops.object.select_all(action='DESELECT')
             for obj in col.objects:
